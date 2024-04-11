@@ -1,8 +1,8 @@
 {
     "id": "{0FD76DFF-025C-F13E-15FA-0C6084FE11BA}",
-    "name": "TileVisu Kachelsammlung",
+    "name": "TileVisu residency status",
     "author": "Stephan Sprick",
-    "url": "https://github.com/da8ter/TileVisu-Kachelsammlung.git",
+    "url": "https://github.com/da8ter/TileVisu-HTML-Tiles/tree/f9b97e8281b8ec677e568e0ab544c97bdbd92d5b/Bewohnerstatus",
     "compatibility": {
         "version": "7.1"
     },
