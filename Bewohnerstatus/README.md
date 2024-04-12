@@ -48,7 +48,7 @@ Foto|Auswahl eines eigenen Bildes als Medienobjekt.
 
 Name     | Beschreibung
 -------- | ------------------
-Pptionen
+Optionen
 Schriftgröße|Schriftgröße Bewohnername
 Eckenradius|Eckenradius Bildanzeige. 50% = rundes Foto.
 Name nazeigen|Name aus- oder einblenden
