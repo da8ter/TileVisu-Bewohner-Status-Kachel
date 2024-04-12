@@ -22,6 +22,8 @@
             background-size: cover;
             opacity: var(--bildtransparenz);
             background: var(--background-image, none) center / cover no-repeat;
+            display: flex; /* Flexbox für body, um die Zentrierung zu ermöglichen */
+            justify-content: center; /* Zentriert den Inhalt horizontal */
 
 
         }
@@ -33,7 +35,7 @@
         }
 
         .container_anwesenheit {
-            width: 100%;
+            width: 90%;
             display: flex;
             flex-wrap: wrap;
             flex-grow: 1;
