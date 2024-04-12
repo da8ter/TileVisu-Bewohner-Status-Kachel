@@ -1,8 +1,8 @@
 {
-    "id": "{0FD76DFF-025C-F13E-15FA-0C6084FE11BA}",
+    "id": "{30643EE7-5533-6FF3-9A1C-E81B1B2D866D}",
     "name": "TileVisu residency status",
     "author": "Stephan Sprick",
-    "url": "https://github.com/da8ter/TileVisu-HTML-Tiles/tree/f9b97e8281b8ec677e568e0ab544c97bdbd92d5b/Bewohnerstatus",
+    "url": "https://github.com/da8ter/TileVisu-HTML-Tiles.git",
     "compatibility": {
         "version": "7.1"
     },
