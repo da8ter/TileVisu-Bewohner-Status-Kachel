@@ -10,3 +10,5 @@ Diese Kachel zeigt den Anwesenheitsstatus von bis zu 5 Bewohnern mit Foto und Na
 
 Dokumentation:
 https://github.com/da8ter/TileVisu-HTML-Tiles/blob/ceb5c9c0a2279e060078c5b47ceabbb6d71ef923/Bewohnerstatus/README.md
+
+[Dokumentation](https://github.com/da8ter/TileVisu-HTML-Tiles/blob/ceb5c9c0a2279e060078c5b47ceabbb6d71ef923/Bewohnerstatus/README.md)
