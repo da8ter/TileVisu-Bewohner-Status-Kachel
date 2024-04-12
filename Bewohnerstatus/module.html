@@ -22,8 +22,10 @@
             background-size: cover;
             opacity: var(--bildtransparenz);
             background: var(--background-image, none) center / cover no-repeat;
-            display: flex; /* Flexbox für body, um die Zentrierung zu ermöglichen */
-            justify-content: center; /* Zentriert den Inhalt horizontal */
+            display: flex;
+            /* Flexbox für body, um die Zentrierung zu ermöglichen */
+            justify-content: center;
+            /* Zentriert den Inhalt horizontal */
 
 
         }
@@ -38,8 +40,6 @@
             width: 90%;
             display: flex;
             flex-wrap: wrap;
-            flex-grow: 1;
-            position: relative;
             justify-content: center;
             align-items: center;
             gap: 10%;
@@ -164,7 +164,7 @@
                     case 'eckenradius':
                         const cornerElements = document.querySelectorAll('.color, .grey');
                         cornerElements.forEach(element => {
-                        element.style.borderRadius = decodedData[parameter] + '%'; 
+                            element.style.borderRadius = decodedData[parameter] + '%';
                         });
                         break;
                     case 'bgimage':
