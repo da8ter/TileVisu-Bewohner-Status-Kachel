@@ -155,20 +155,14 @@
                         break;
 
                     case 'fontsize':
-                        // Wählen Sie alle Elemente mit der Klasse .name aus
                         const nameElements = document.querySelectorAll('.name');
-
-                        // Ändern Sie die font-size für jedes ausgewählte Element
                         nameElements.forEach(element => {
-                            element.style.fontSize = decodedData[parameter] + 'em'; // Setzen Sie den Wert auf die gewünschte Schriftgröße
+                            element.style.fontSize = decodedData[parameter] + 'em';
                         });
                     case 'eckenradius':
-                        // Wählen Sie alle Elemente mit der Klasse .name aus
                         const cornerElements = document.querySelectorAll('.color, .grey');
-
-                        // Ändern Sie die font-size für jedes ausgewählte Element
                         cornerElements.forEach(element => {
-                            element.style.borderRadius = decodedData[parameter] + '%'; // Setzen Sie den Wert auf die gewünschte Schriftgröße
+                        element.style.borderRadius = decodedData[parameter] + '%'; 
                         });
                         break;
                     case 'bgimage':
@@ -188,9 +182,7 @@
                         }
                         break;
                     default:
-                        //console.log('Setze innerHTML für', parameter);
-                        // Setze innerHTML nur, wenn das Element gefunden wurde
-                        //element.innerHTML = decodedData[parameter];
+
                         break;
                 }
 
