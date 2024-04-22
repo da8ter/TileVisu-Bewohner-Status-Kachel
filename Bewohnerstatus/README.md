@@ -1,6 +1,8 @@
 # Bewohnerstatus
 ![Bewohnerstatus-Kachel](https://github.com/da8ter/images/blob/main/bewohner_status.jpg)
 
+Support: https://community.symcon.de/t/html-kachelsammlung-bewohnerstatus-waermepumpe-etc/
+
 ### Inhaltsverzeichnis
 
 1. [Funktionsumfang](#1-funktionsumfang)
