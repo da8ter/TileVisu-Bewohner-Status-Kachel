@@ -6,7 +6,6 @@
     <style>
         html { 
             background-color: var(--hintergrundfarbe);
-            overflow: hidden;
         }
 
         body:before {
@@ -34,28 +33,26 @@
         }
 
         .container_anwesenheit {
-            width: 95%;
-            display: flex;
-            flex-wrap: wrap;
-            justify-content: center;
-            align-items: center;
-            gap: 10%;
-        }
+    width: 95%;
+    display: grid;
+    /* jede Spalte ist min. 100 px breit, sonst teilt sich der freie Platz gleichmäßig */
+    grid-template-columns: repeat(auto-fit, minmax(100px, 1fr));
+    gap: 2vh;
+    justify-items: center;   /* Icon in der Zelle zentrieren */
+    align-items: center;
+}
 
-        .Bewohner1,
-        .Bewohner2,
-        .Bewohner3,
-        .Bewohner4,
-        .Bewohner5 {
-            display: flex;
-            justify-content: center;
-            align-items: center;
-            flex-direction: column;
-            flex: 1;
-
-            min-width: 30px;
-            max-width: 500px;
-        }
+.Bewohner1,
+.Bewohner2,
+.Bewohner3,
+.Bewohner4,
+.Bewohner5 {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    width: 100%;             /* nimmt volle Zellenbreite an */
+}
 
         .name {
             margin-top: 5px;
@@ -65,10 +62,14 @@
 
         /* Gemeinsame Stile für .color und .grey */
         .color,
-        .grey {
-            width: 100%;
-            border-radius: 50%;
-        }
+.grey {
+    width: 100%;             /* füllt die Zelle komplett */
+    height: auto;            /* behält Seitenverhältnis */
+    max-width: 50vh;         /* nach oben begrenzen, sonst werden sie riesig */
+    max-height: 50vh;
+    border-radius: 50%;      /* bleibt schön rund */
+    object-fit: contain;
+}
 
         .color {
             filter: grayscale(0%);
