@@ -1,0 +1,303 @@
+<!DOCTYPE html>
+<html>
+
+<head>
+
+    <style>
+
+        html {
+            background-color: var(--hintergrundfarbe);
+            overflow: hidden;
+        }
+
+        body:before {
+            content: '';
+            display: flex;
+            position: fixed;
+            left: 0;
+            top: 0;
+            width: 100%;
+            height: 100%;
+            z-index: -1;
+            background-repeat: no-repeat;
+            background-size: cover;
+            opacity: var(--bildtransparenz);
+            background: var(--background-image, none) center / cover no-repeat;
+        }
+
+        body {
+            justify-content: center;
+            display: flex;
+        }
+
+        .hidden {
+            display: none;
+        }
+
+        .container_anwesenheit {
+            width: 100%;
+            display: grid;
+            /* jede Spalte ist min. 100 px breit, sonst teilt sich der freie Platz gleichmäßig */
+            grid-template-columns: repeat(auto-fit, minmax(50px, 1fr));
+            gap: 3vh;
+            justify-items: center;
+            /* Icon in der Zelle zentrieren */
+            align-items: start;
+            align-content: center;
+            padding-top: 2vh;
+            padding-bottom: 2vh;
+        }
+
+        .Bewohner1,
+        .Bewohner2,
+        .Bewohner3,
+        .Bewohner4,
+        .Bewohner5 {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: flex-start;
+            width: 100%;
+            /* nimmt volle Zellenbreite an */
+            gap: 5px; /* Abstand zwischen Bild-Wrapper und Text */
+        }
+
+        .image-wrapper {
+            position: relative; /* Behalten, falls zukünftig für andere Zwecke benötigt */
+            display: flex;
+            align-items: center; /* Vertikale Zentrierung des Kind-Elements (img) */
+            justify-content: center; /* Horizontale Zentrierung des Kind-Elements (img) */
+            width: 100%; /* Nimmt volle Breite der Grid-Spalte */
+            max-width: 90%; /* Maximale Größe des Bildkreises, anpassbar */
+            aspect-ratio: 1 / 1; /* Behält ein quadratisches Seitenverhältnis bei */
+            margin-left: auto; /* Zentriert den Wrapper horizontal */
+            margin-right: auto;
+            overflow: hidden; /* Verhindert, dass übergroße Inhalte vor object-fit sichtbar sind */
+        }
+
+        .name {
+            text-align: center;
+            font-size: 1em;
+            width: 100%; /* Stellt sicher, dass die Zentrierung über die volle Breite erfolgt */
+            line-height: 1.2;
+            /* word-break: break-word; removed as nowrap is used for ellipsis */
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+        }
+        .info {
+            text-align: center;
+            font-size: 1em;
+            opacity: 0.5;
+            width: 100%; /* Stellt sicher, dass die Zentrierung über die volle Breite erfolgt */
+            line-height: 1.2;
+            /* word-break: break-word; removed as nowrap is used for ellipsis */
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+        }
+
+        /* Gemeinsame Stile für .color und .grey */
+        .color,
+        .grey {
+            /* position: absolute, top, left entfernt */
+            max-width: 100%; /* Stellt sicher, dass das Bild nicht breiter als der Wrapper ist */
+            max-height: 100%; /* Stellt sicher, dass das Bild nicht höher als der Wrapper ist */
+            object-fit: contain; /* Zeigt das gesamte Bild, behält Seitenverhältnis bei und zentriert es innerhalb seiner Box */
+            border-radius: 50%; /* Macht das Bild rund */
+            /* Filter und Opazität bleiben wie in den spezifischen .color / .grey Regeln unten */
+        }
+
+        .color {
+            filter: grayscale(0%);
+        }
+
+        .grey {
+            filter: grayscale(100%);
+            opacity: 0.5;
+        }
+    </style>
+</head>
+
+<body>
+
+    <script>
+        function handleMessage(data) {
+            //console.log('Rohdaten empfangen:', data);
+
+            const decodedData = JSON.parse(data);
+            //console.log('Decodierte Daten:', decodedData);
+
+            for (const parameter in decodedData) {
+                //console.log('Aktueller Parameter:', parameter, 'Wert:', decodedData[parameter]);
+
+                const element = document.getElementById(parameter);
+                var root = document.documentElement;
+                // Abhängig vom Parameter werden allerdings verschiedene Werte angepasst
+                switch (parameter) {
+                    case 'Bewohner1':
+                    case 'Bewohner2':
+                    case 'Bewohner3':
+                    case 'Bewohner4':
+                    case 'Bewohner5':
+                        //console.log('Anpassung der Sichtbarkeit für', parameter);
+                        element.className = decodedData[parameter] ? parameter : 'hidden';
+                        break;
+
+                    case 'image1':
+                    case 'image2':
+                    case 'image3':
+                    case 'image4':
+                    case 'image5':
+                        element.src = decodedData[parameter];
+                        break;
+
+                    case 'value1':
+                        image1.className = decodedData[parameter] ? 'color' : 'grey';
+                        break;
+
+                    case 'value2':
+                        image2.className = decodedData[parameter] ? 'color' : 'grey';
+                        break;
+
+                    case 'value3':
+                        image3.className = decodedData[parameter] ? 'color' : 'grey';
+                        break;
+
+                    case 'value4':
+                        image4.className = decodedData[parameter] ? 'color' : 'grey';
+                        break;
+
+                    case 'value5':
+                        image5.className = decodedData[parameter] ? 'color' : 'grey';
+                        break;
+
+                    case 'name1':
+                    case 'name2':
+                    case 'name3':
+                    case 'name4':
+                    case 'name5':
+                        element.innerHTML = decodedData[parameter];
+                        break;
+
+                    case 'nameswitch':
+
+                        name1.className = decodedData[parameter] ? 'name' : 'hidden';
+                        name2.className = decodedData[parameter] ? 'name' : 'hidden';
+                        name3.className = decodedData[parameter] ? 'name' : 'hidden';
+                        name4.className = decodedData[parameter] ? 'name' : 'hidden';
+                        name5.className = decodedData[parameter] ? 'name' : 'hidden';
+
+
+                        break;
+
+                    case 'fontsize':
+                        const nameElements = document.querySelectorAll('.name');
+                        nameElements.forEach(element => {
+                            element.style.fontSize = decodedData[parameter] + 'em';
+                        });
+                        break;
+                    case 'infontsize':
+                        const infoElements = document.querySelectorAll('.info');
+                        infoElements.forEach(element => {
+                            element.style.fontSize = decodedData[parameter] + 'em';
+                        });
+                    case 'eckenradius':
+                        const cornerElements = document.querySelectorAll('.color, .grey');
+                        cornerElements.forEach(element => {
+                            element.style.borderRadius = decodedData[parameter] + '%';
+                        });
+                        break;
+                    case 'bgimage':
+                        const mainDivBg = document.querySelector('body'); // Variable umbenannt zur Klarheit
+                        const bgImageValue = decodedData[parameter];
+                        if (bgImageValue && bgImageValue !== '') {
+                            mainDivBg.style.setProperty('--background-image', 'url(' + bgImageValue + ')');
+                        } else {
+                            mainDivBg.style.setProperty('--background-image', 'none'); // Explizit kein Hintergrundbild setzen
+                        }
+                        break;
+                    case 'bildtransparenz':
+                        root.style.setProperty('--bildtransparenz', decodedData[parameter]);
+                        break;
+                    case 'kachelhintergrundfarbe':
+
+                        if (decodedData[parameter] === '#FFFFFFFFFFFFFFFF') {
+                            root.style.setProperty('--hintergrundfarbe', 'rgba(0, 0, 0, 0)');
+                        }
+                        else {
+                            root.style.setProperty('--hintergrundfarbe', decodedData[parameter]);
+                        }
+                        break;
+                    case 'info1':
+                    case 'info2':
+                    case 'info3':
+                    case 'info4':
+                    case 'info5':
+                        var infoDiv = document.getElementById(parameter);
+                        infoDiv.innerHTML = decodedData[parameter];
+                        if (decodedData[parameter] && decodedData[parameter] !== '') {
+                            infoDiv.className = 'info';
+                        } else {
+                            infoDiv.className = 'info hidden';
+                        }
+                        // Set font size from infontsize if available
+                        if ('infontsize' in decodedData) {
+                            infoDiv.style.fontSize = decodedData['infontsize'] + 'em';
+                        }
+                        break;
+                    default:
+
+                        break;
+                }
+
+            }
+        }
+    </script>
+
+
+    <div class="container_anwesenheit" id="container">
+        <div class="bewohner_div" id="Bewohner1">
+            <div class="image-wrapper">
+                <img class="color" id="image1" onclick="requestAction('Bewohner1', 1);">
+            </div>
+            <div class="hidden" id="name1">1</div>
+            <div class="info hidden" id="info1"></div>
+        </div>
+
+        <div class="bewohner_div" id="Bewohner2">
+            <div class="image-wrapper">
+                <img class="color" id="image2" onclick="requestAction('Bewohner2', 1);">
+            </div>
+            <div class="hidden" id="name2">2</div>
+            <div class="info hidden" id="info2"></div>
+        </div>
+
+        <div class="bewohner_div" id="Bewohner3">
+            <div class="image-wrapper">
+                <img class="color" id="image3" onclick="requestAction('Bewohner3', 1);">
+            </div>
+            <div class="hidden" id="name3">3</div>
+            <div class="info hidden" id="info3"></div>
+        </div>
+
+        <div class="bewohner_div" id="Bewohner4">
+            <div class="image-wrapper">
+                <img class="color" id="image4" onclick="requestAction('Bewohner4', 1);">
+            </div>
+            <div class="hidden" id="name4">4</div>
+            <div class="info hidden" id="info4"></div>
+        </div>
+
+        <div class="bewohner_div" id="Bewohner5">
+            <div class="image-wrapper">
+                <img class="color" id="image5" onclick="requestAction('Bewohner5', 1);">
+            </div>
+            <div class="hidden" id="name5">5</div>
+            <div class="info hidden" id="info5"></div>
+        </div>
+    </div>
+
+</body>
+
+</html>
