@@ -68,7 +68,7 @@
             align-items: center; /* Vertikale Zentrierung des Kind-Elements (img) */
             justify-content: center; /* Horizontale Zentrierung des Kind-Elements (img) */
             width: 100%; /* Nimmt volle Breite der Grid-Spalte */
-            max-width: 40vh; /* Maximale Größe des Bildkreises, anpassbar */
+            max-width: var(--image-max-width, 80%); /* Maximale Größe des Bildkreises, anpassbar über die Konfiguration */
             aspect-ratio: 1 / 1; /* Behält ein quadratisches Seitenverhältnis bei */
             margin-left: auto; /* Zentriert den Wrapper horizontal */
             margin-right: auto;
@@ -216,6 +216,9 @@
                         } else {
                             mainDivBg.style.setProperty('--background-image', 'none'); // Explizit kein Hintergrundbild setzen
                         }
+                        break;
+                    case 'imageMaxWidth':
+                        root.style.setProperty('--image-max-width', decodedData[parameter] + '%');
                         break;
                     case 'bildtransparenz':
                         root.style.setProperty('--bildtransparenz', decodedData[parameter]);

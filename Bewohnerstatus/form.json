@@ -265,6 +265,15 @@
                     "minimum": 0.0,
                     "maximum": 50,
                     "suffix": "%"
+                },
+                {
+                    "type": "NumberSpinner",
+                    "name": "ImageMaxWidth",
+                    "caption": "Maximale Bildbreite in %",
+                    "minimum": 10,
+                    "maximum": 100,
+                    "step": 1,
+                    "suffix": "%"
                 }
             ]
         },

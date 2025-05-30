@@ -24,6 +24,7 @@ class TileVisuresidencystatustile extends IPSModule
         $this->RegisterPropertyInteger('Kachelhintergrundfarbe', -1);
         $this->RegisterPropertyBoolean('NameSwitch', 1);
         $this->RegisterPropertyBoolean('BedienungSwitch', 0);
+        $this->RegisterPropertyInteger('ImageMaxWidth', 80); // Maximale Bildbreite in vh
         // Visualisierungstyp auf 1 setzen, da wir HTML anbieten möchten
         $this->SetVisualizationType(1);
     }
@@ -202,6 +203,7 @@ class TileVisuresidencystatustile extends IPSModule
         $result['eckenradius'] = $this->ReadPropertyFloat('Eckenradius');
         $result['bildtransparenz'] = $this->ReadPropertyFloat('Bildtransparenz');
         $result['kachelhintergrundfarbe'] = '#' . sprintf('%06X', $this->ReadPropertyInteger('Kachelhintergrundfarbe'));
+        $result['imageMaxWidth'] = $this->ReadPropertyInteger('ImageMaxWidth');
 
         // Hintergrundbild
         $bgImageID = $this->ReadPropertyInteger('bgImage');
