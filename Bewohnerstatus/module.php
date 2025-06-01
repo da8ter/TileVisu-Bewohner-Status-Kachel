@@ -15,8 +15,8 @@ class TileVisuresidencystatustile extends IPSModule
             $this->RegisterPropertyInteger('Bewohner' . $i . 'Image', 0);
             $this->RegisterPropertyString('Bewohner' . $i . 'AltName', '');
         }
-        $this->RegisterPropertyFloat('Schriftgroesse', 1);
-        $this->RegisterPropertyFloat('InfoSchriftgroesse', 1);
+        $this->RegisterPropertyFloat('Schriftgroesse', 10);
+        $this->RegisterPropertyFloat('InfoSchriftgroesse', 8);
         $this->RegisterPropertyFloat('Eckenradius', 50);
         $this->RegisterPropertyBoolean('BG_Off', 1);
         $this->RegisterPropertyInteger("bgImage", 0);
