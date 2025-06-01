@@ -242,20 +242,20 @@
                 {
                     "type": "NumberSpinner",
                     "name": "Schriftgroesse",
-                    "caption": "Status Font size in em",
+                    "caption": "Status Font size in px",
                     "digits": 1,
-                    "minimum": 0.2,
-                    "maximum": 2.0,
-                    "suffix": "em"
+                    "minimum": 1,
+                    "maximum": 50,
+                    "suffix": "px"
                 },
                 {
                     "type": "NumberSpinner",
                     "name": "InfoSchriftgroesse",
-                    "caption": "Info Font size in em",
+                    "caption": "Info Font size in px",
                     "digits": 1,
-                    "minimum": 0.2,
-                    "maximum": 2.0,
-                    "suffix": "em"
+                    "minimum": 1,
+                    "maximum": 50,
+                    "suffix": "px"
                 },
                 {
                     "type": "NumberSpinner",
