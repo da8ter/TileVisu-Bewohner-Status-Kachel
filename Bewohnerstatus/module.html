@@ -13,6 +13,11 @@
 [style*="--debug-outline: 1px"] .container_anwesenheit {
   outline: 1px solid yellow !important;
 }
+
+/* Blauer, halbtransparenter Hintergrund für den Body im Debug-Modus */
+[style*="--debug-outline: 1px"] body {
+  background-color: rgba(0, 0, 255, 0.5) !important;
+}
         html {
             background-color: var(--hintergrundfarbe);
             overflow: hidden;
