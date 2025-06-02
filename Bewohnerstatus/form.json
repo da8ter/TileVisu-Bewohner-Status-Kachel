@@ -237,6 +237,11 @@
             "bold": true
         },
         {
+            "type": "CheckBox",
+            "name": "DebugOutline",
+            "caption": "Debug: Rote Outline (1px) für alle HTML Elemente anzeigen"
+        },
+        {
             "type": "RowLayout",
             "items": [
                 {

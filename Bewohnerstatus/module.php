@@ -24,6 +24,7 @@ class TileVisuresidencystatustile extends IPSModule
         $this->RegisterPropertyInteger('Kachelhintergrundfarbe', -1);
         $this->RegisterPropertyBoolean('NameSwitch', 1);
         $this->RegisterPropertyBoolean('BedienungSwitch', 0);
+        $this->RegisterPropertyBoolean('DebugOutline', 0);
         $this->RegisterPropertyInteger('ImageMaxWidth', 80); // Maximale Bildbreite in vh
         // Visualisierungstyp auf 1 setzen, da wir HTML anbieten möchten
         $this->SetVisualizationType(1);
@@ -181,6 +182,7 @@ class TileVisuresidencystatustile extends IPSModule
             $result['bewohner' . $i . 'altname'] = $this->ReadPropertyString('Bewohner' . $i . 'AltName');
         }
         $result['nameswitch'] = $this->ReadPropertyBoolean('NameSwitch');
+        $result['DebugOutline'] = $this->ReadPropertyBoolean('DebugOutline');
         $result['fontsize'] = $this->ReadPropertyFloat('Schriftgroesse');
         $result['infontsize'] = $this->ReadPropertyFloat('InfoSchriftgroesse');
 

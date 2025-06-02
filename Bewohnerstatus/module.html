@@ -4,9 +4,9 @@
 <head>
 
     <style>
-/* alle sichtbaren und Pseudo-Elemente umranden */
+/* Debug outline - nur aktiv, wenn debug-outline CSS-Variable auf 1px gesetzt ist */
 *, *::before, *::after {
-  outline: 0px solid red !important;
+  outline: var(--debug-outline, 0px) solid red !important;
 }
         html {
             background-color: var(--hintergrundfarbe);
@@ -233,6 +233,14 @@
                         }
                         else {
                             root.style.setProperty('--hintergrundfarbe', decodedData[parameter]);
+                        }
+                        break;
+                    case 'DebugOutline':
+                        // Setze die Debug-Outline Variable basierend auf dem Checkbox-Wert
+                        if (decodedData[parameter]) {
+                            root.style.setProperty('--debug-outline', '1px');
+                        } else {
+                            root.style.setProperty('--debug-outline', '0px');
                         }
                         break;
                     case 'info1':
