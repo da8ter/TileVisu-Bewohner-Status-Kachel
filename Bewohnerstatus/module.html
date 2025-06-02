@@ -8,6 +8,11 @@
 *, *::before, *::after {
   outline: var(--debug-outline, 0px) solid red !important;
 }
+
+/* Spezielle gelbe Outline für den Container im Debug-Modus */
+[style*="--debug-outline: 1px"] .container_anwesenheit {
+  outline: 1px solid yellow !important;
+}
         html {
             background-color: var(--hintergrundfarbe);
             overflow: hidden;
