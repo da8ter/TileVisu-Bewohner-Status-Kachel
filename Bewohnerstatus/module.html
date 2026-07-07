@@ -153,23 +153,11 @@
                         break;
 
                     case 'value1':
-                        image1.className = decodedData[parameter] ? 'color' : 'grey';
-                        break;
-
                     case 'value2':
-                        image2.className = decodedData[parameter] ? 'color' : 'grey';
-                        break;
-
                     case 'value3':
-                        image3.className = decodedData[parameter] ? 'color' : 'grey';
-                        break;
-
                     case 'value4':
-                        image4.className = decodedData[parameter] ? 'color' : 'grey';
-                        break;
-
                     case 'value5':
-                        image5.className = decodedData[parameter] ? 'color' : 'grey';
+                        document.getElementById('image' + parameter.slice(5)).className = decodedData[parameter] ? 'color' : 'grey';
                         break;
 
                     case 'name1':
@@ -177,18 +165,13 @@
                     case 'name3':
                     case 'name4':
                     case 'name5':
-                        element.innerHTML = decodedData[parameter];
+                        element.textContent = decodedData[parameter];
                         break;
 
                     case 'nameswitch':
-
-                        name1.className = decodedData[parameter] ? 'name' : 'hidden';
-                        name2.className = decodedData[parameter] ? 'name' : 'hidden';
-                        name3.className = decodedData[parameter] ? 'name' : 'hidden';
-                        name4.className = decodedData[parameter] ? 'name' : 'hidden';
-                        name5.className = decodedData[parameter] ? 'name' : 'hidden';
-
-
+                        for (let i = 1; i <= 5; i++) {
+                            document.getElementById('name' + i).className = decodedData[parameter] ? 'name' : 'hidden';
+                        }
                         break;
 
                     case 'fontsize':
@@ -202,6 +185,7 @@
                         infoElements.forEach(element => {
                             element.style.fontSize = decodedData[parameter] + 'em';
                         });
+                        break;
                     case 'eckenradius':
                         const cornerElements = document.querySelectorAll('.color, .grey');
                         cornerElements.forEach(element => {
@@ -235,7 +219,7 @@
                     case 'info4':
                     case 'info5':
                         var infoDiv = document.getElementById(parameter);
-                        infoDiv.innerHTML = decodedData[parameter];
+                        infoDiv.textContent = decodedData[parameter];
                         if (decodedData[parameter] && decodedData[parameter] !== '') {
                             infoDiv.className = 'info';
                         } else {

@@ -15,7 +15,7 @@
         },
         {
             "type": "Label",
-            "caption": "Je Bewohner wird eine Bool-Variable benötigt. (true = anwesend, false = abwesend)"
+            "caption": "A Bool variable is needed for each resident. (true = present, false = absent)"
         },
         {
             "type": "Label",
@@ -58,7 +58,7 @@
                         },
                         {
                             "type": "SelectColor",
-                            "allowTransparent": "false",
+                            "allowTransparent": true,
                             "name": "Kachelhintergrundfarbe",
                             "caption": "Tile background color"
                         }
@@ -233,7 +233,7 @@
         },
         {
             "type": "Label",
-            "caption": "Optionen",
+            "caption": "Options",
             "bold": true
         },
         {
