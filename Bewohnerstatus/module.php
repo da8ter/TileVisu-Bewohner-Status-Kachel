@@ -1,15 +1,16 @@
 <?php
 
-class TileVisuresidencystatustile extends IPSModule
-{
+declare(strict_types=1);
 
-    public function Create()
+class TileVisuresidencystatustile extends IPSModuleStrict
+{
+    private const RESIDENT_COUNT = 5;
+
+    public function Create(): void
     {
-        //Never delete this line!
         parent::Create();
 
-        // Eigenschaften für die dargestellten Zähler und Bilder in Schleifen registrieren
-        for ($i = 1; $i <= 5; $i++) {
+        for ($i = 1; $i <= self::RESIDENT_COUNT; $i++) {
             $this->RegisterPropertyInteger('Bewohner' . $i, 0);
             $this->RegisterPropertyInteger('AdditionalInfo' . $i, 0);
             $this->RegisterPropertyInteger('Bewohner' . $i . 'Image', 0);
@@ -18,233 +19,232 @@ class TileVisuresidencystatustile extends IPSModule
         $this->RegisterPropertyFloat('Schriftgroesse', 10);
         $this->RegisterPropertyFloat('InfoSchriftgroesse', 8);
         $this->RegisterPropertyFloat('Eckenradius', 50);
-        $this->RegisterPropertyBoolean('BG_Off', 1);
-        $this->RegisterPropertyInteger("bgImage", 0);
+        $this->RegisterPropertyBoolean('BG_Off', true);
+        $this->RegisterPropertyInteger('bgImage', 0);
         $this->RegisterPropertyFloat('Bildtransparenz', 0.7);
         $this->RegisterPropertyInteger('Kachelhintergrundfarbe', -1);
-        $this->RegisterPropertyBoolean('NameSwitch', 1);
-        $this->RegisterPropertyBoolean('BedienungSwitch', 0);
-        $this->RegisterPropertyBoolean('DebugOutline', 0);
-        $this->RegisterPropertyInteger('ImageMaxWidth', 80); // Maximale Bildbreite in vh
-        // Visualisierungstyp auf 1 setzen, da wir HTML anbieten möchten
+        $this->RegisterPropertyBoolean('NameSwitch', true);
+        $this->RegisterPropertyBoolean('BedienungSwitch', false);
+        $this->RegisterPropertyBoolean('DebugOutline', false);
+        $this->RegisterPropertyInteger('ImageMaxWidth', 80); // Maximale Bildbreite in %
+
+        // HTML-SDK-Darstellung
         $this->SetVisualizationType(1);
     }
 
-    public function ApplyChanges()
+    public function ApplyChanges(): void
     {
         parent::ApplyChanges();
 
-        //Referenzen Registrieren
-        $ids = [$this->ReadPropertyInteger('bgImage')];
-        for ($i = 1; $i <= 5; $i++) {
-            $ids[] = $this->ReadPropertyInteger('Bewohner' . $i);
-            $ids[] = $this->ReadPropertyInteger('Bewohner' . $i . 'Image');
-            $ids[] = $this->ReadPropertyInteger('AdditionalInfo' . $i);
-        }
-        $refs = $this->GetReferenceList();
-        foreach ($refs as $ref) {
-            $this->UnregisterReference($ref);
-        }
-        foreach ($ids as $id) {
-            if ($id !== '') {
-                $this->RegisterReference($id);
-            }
+        // Kein Heavy Work vor KR_READY: Referenzen, Messages und Fremdvariablen-Zugriffe
+        // erst, wenn der Kernel bereit ist.
+        if (IPS_GetKernelRunlevel() !== KR_READY) {
+            $this->RegisterMessage(0, IPS_KERNELSTARTED);
+            return;
         }
 
-        // Aktualisiere registrierte Nachrichten
+        $this->RegisterWatchedObjects();
+
+        // Komplette Update-Nachricht an die Darstellung, da sich Parameter geändert haben können
+        $this->UpdateVisualizationValue($this->GetFullUpdateMessage());
+    }
+
+    public function Destroy(): void
+    {
+        parent::Destroy();
+    }
+
+    public function MessageSink(int $TimeStamp, int $SenderID, int $Message, array $Data): void
+    {
+        if ($Message === IPS_KERNELSTARTED) {
+            $this->ApplyChanges();
+            return;
+        }
+
+        for ($i = 1; $i <= self::RESIDENT_COUNT; $i++) {
+            if ($SenderID === $this->ReadPropertyInteger('Bewohner' . $i)) {
+                switch ($Message) {
+                    case OM_CHANGENAME:
+                        // Ein konfigurierter Alternativname hat Vorrang vor dem Objektnamen
+                        if ($this->ReadPropertyString('Bewohner' . $i . 'AltName') === '') {
+                            $this->UpdateVisualizationValue(json_encode([
+                                'name' . $i => (string)($Data[0] ?? '')
+                            ]));
+                        }
+                        break;
+
+                    case VM_UPDATE:
+                        $this->UpdateVisualizationValue(json_encode([
+                            'value' . $i => (bool)GetValue($SenderID)
+                        ]));
+                        break;
+                }
+            }
+
+            if ($Message === VM_UPDATE && $SenderID === $this->ReadPropertyInteger('AdditionalInfo' . $i)) {
+                $this->UpdateVisualizationValue(json_encode([
+                    'info' . $i => GetValueFormatted($SenderID)
+                ]));
+            }
+        }
+    }
+
+    public function RequestAction(string $Ident, mixed $Value): void
+    {
+        // Die Darstellung bedient ausschließlich die Bewohner-Status-Variablen —
+        // alle anderen Idents werden an der Systemgrenze abgewiesen.
+        if (preg_match('/^Bewohner[1-5]$/', $Ident) !== 1) {
+            throw new Exception('Invalid ident: ' . $Ident);
+        }
+
+        if ($this->ReadPropertyBoolean('BedienungSwitch')) {
+            return; // Bedienung ist gesperrt
+        }
+
+        $variableID = $this->ReadPropertyInteger($Ident);
+        if (!IPS_VariableExists($variableID)) {
+            $this->SendDebug('RequestAction', 'Variable to be updated does not exist', 0);
+            return;
+        }
+
+        SetValue($variableID, !GetValueBoolean($variableID));
+    }
+
+    public function GetVisualizationTile(): string
+    {
+        $module = file_get_contents(__DIR__ . '/module.html');
+        if ($module === false) {
+            $this->LogMessage('module.html could not be loaded', KL_ERROR);
+            return '';
+        }
+
+        // Initiale Werte analog zu Laufzeit-Updates setzen. Das doppelte json_encode ist
+        // beabsichtigt: es liefert den JSON-String als korrekt escaptes JS-Stringliteral.
+        // Wichtig: $initialHandling nach dem HTML, da handleMessage dort erst definiert wird.
+        $initialHandling = '<script>handleMessage(' . json_encode($this->GetFullUpdateMessage()) . ');</script>';
+
+        return $module . $initialHandling;
+    }
+
+    // Referenzen und Nachrichten-Abos passend zur aktuellen Konfiguration neu aufbauen
+    private function RegisterWatchedObjects(): void
+    {
+        foreach ($this->GetReferenceList() as $ref) {
+            $this->UnregisterReference($ref);
+        }
         foreach ($this->GetMessageList() as $senderID => $messageIDs) {
             foreach ($messageIDs as $messageID) {
                 $this->UnregisterMessage($senderID, $messageID);
             }
         }
 
-        foreach (['Bewohner1', 'Bewohner2', 'Bewohner3', 'Bewohner4', 'Bewohner5'] as $BewohnerProperty) {
-            $this->RegisterMessage($this->ReadPropertyInteger($BewohnerProperty), OM_CHANGENAME);
-            $this->RegisterMessage($this->ReadPropertyInteger($BewohnerProperty), VM_UPDATE);
-        }
-        // AdditionalInfo-Variablen ebenfalls für Updates registrieren
-        foreach (['AdditionalInfo1', 'AdditionalInfo2', 'AdditionalInfo3', 'AdditionalInfo4', 'AdditionalInfo5'] as $InfoProperty) {
-            $this->RegisterMessage($this->ReadPropertyInteger($InfoProperty), VM_UPDATE);
-        }
-
-        // Schicke eine komplette Update-Nachricht an die Darstellung, da sich ja Parameter geändert haben können
-        $this->UpdateVisualizationValue($this->GetFullUpdateMessage());
-    }
-
-    public function MessageSink($TimeStamp, $SenderID, $Message, $Data)
-    {
-        foreach (['Bewohner1', 'Bewohner2', 'Bewohner3', 'Bewohner4', 'Bewohner5'] as $index => $BewohnerProperty) {
-            if ($SenderID === $this->ReadPropertyInteger($BewohnerProperty)) {
-                switch ($Message) {
-                    case OM_CHANGENAME:
-                        // Teile der HTML-Darstellung den neuen Namen mit
-                        $this->UpdateVisualizationValue(json_encode([
-                            'name' . ($index + 1) => $Data[0]
-                        ]));
-                        break;
-
-                    case VM_UPDATE:
-                        // Teile der HTML-Darstellung den neuen Wert mit. Damit dieser korrekt formatiert ist, holen wir uns den von der Variablen via GetValueFormatted
-                        $this->UpdateVisualizationValue(json_encode(['value' . ($index + 1) => GetValue($this->ReadPropertyInteger($BewohnerProperty))]));
-                        break;
-                }
+        $register = function (int $id, array $messages): void {
+            if ($id <= 0) {
+                return;
             }
-        }
-        // AdditionalInfo-Variablen prüfen
-        foreach (['AdditionalInfo1', 'AdditionalInfo2', 'AdditionalInfo3', 'AdditionalInfo4', 'AdditionalInfo5'] as $index => $InfoProperty) {
-            if ($SenderID === $this->ReadPropertyInteger($InfoProperty)) {
-                if ($Message == VM_UPDATE) {
-                    $this->UpdateVisualizationValue(json_encode([
-                        'info' . ($index + 1) => GetValueFormatted($SenderID)
-                    ]));
-                }
+            $this->RegisterReference($id);
+            foreach ($messages as $message) {
+                $this->RegisterMessage($id, $message);
             }
+        };
+
+        $register($this->ReadPropertyInteger('bgImage'), []);
+        for ($i = 1; $i <= self::RESIDENT_COUNT; $i++) {
+            $register($this->ReadPropertyInteger('Bewohner' . $i), [OM_CHANGENAME, VM_UPDATE]);
+            $register($this->ReadPropertyInteger('AdditionalInfo' . $i), [VM_UPDATE]);
+            $register($this->ReadPropertyInteger('Bewohner' . $i . 'Image'), []);
         }
     }
 
-    public function RequestAction($Ident, $value)
-    {
-        // Nachrichten von der HTML-Darstellung schicken immer den Ident passend zur Eigenschaft und im Wert die Differenz, welche auf die Variable gerechnet werden soll
-        $variableID = $this->ReadPropertyInteger($Ident);
-        $sperre = $this->ReadPropertyBoolean('BedienungSwitch');
-        if (!IPS_VariableExists($variableID)) {
-            $this->SendDebug('Error in RequestAction', 'Variable to be updated does not exist', 0);
-            return;
-        }
-        // Umschalten des Werts der Variable
-        $currentValue = GetValue($variableID);
-        if ($sperre == false) {
-            SetValue($variableID, !$currentValue);
-        }
-
-    }
-
-    public function GetVisualizationTile()
-    {
-        // Füge ein Skript hinzu, um beim laden, analog zu Änderungen bei Laufzeit, die Werte zu setzen
-        // Obwohl die Rückgabe von GetFullUpdateMessage ja schon JSON-codiert ist wird dennoch ein weiteres mal json_encode ausgeführt
-        // Damit wird dem String Anführungszeichen hinzugefügt und eventuelle Anführungszeichen innerhalb werden korrekt escaped
-        $initialHandling = '<script>handleMessage(' . json_encode($this->GetFullUpdateMessage()) . ');</script>';
-
-        // Füge statisches HTML aus Datei hinzu
-        $module = file_get_contents(__DIR__ . '/module.html');
-
-        // Gebe alles zurück. 
-        // Wichtig: $initialHandling nach hinten, da die Funktion handleMessage ja erst im HTML definiert wird
-        return $module . $initialHandling;
-    }
-
-    // Generiere eine Nachricht, die alle Elemente in der HTML-Darstellung aktualisiert
-    private function _getBase64ImageData(int $imageID, string $defaultImagePath = ''): string
+    private function GetBase64ImageData(int $imageID, string $defaultImagePath = ''): string
     {
         if (IPS_MediaExists($imageID)) {
             $image = IPS_GetMedia($imageID);
             if ($image['MediaType'] === MEDIATYPE_IMAGE) {
                 $imageFile = explode('.', $image['MediaFile']);
                 $imageExtension = strtolower(end($imageFile));
-                $imageContentPrefix = '';
-                switch ($imageExtension) {
-                    case 'bmp':
-                        $imageContentPrefix = 'data:image/bmp;base64,';
-                        break;
-                    case 'jpg':
-                    case 'jpeg':
-                        $imageContentPrefix = 'data:image/jpeg;base64,';
-                        break;
-                    case 'gif':
-                        $imageContentPrefix = 'data:image/gif;base64,';
-                        break;
-                    case 'png':
-                        $imageContentPrefix = 'data:image/png;base64,';
-                        break;
-                    case 'ico':
-                        $imageContentPrefix = 'data:image/x-icon;base64,';
-                        break;
-                }
+                $imageContentPrefix = match ($imageExtension) {
+                    'bmp'          => 'data:image/bmp;base64,',
+                    'jpg', 'jpeg'  => 'data:image/jpeg;base64,',
+                    'gif'          => 'data:image/gif;base64,',
+                    'png'          => 'data:image/png;base64,',
+                    'ico'          => 'data:image/x-icon;base64,',
+                    default        => ''
+                };
 
-                if ($imageContentPrefix) {
+                if ($imageContentPrefix !== '') {
                     return $imageContentPrefix . IPS_GetMediaContent($imageID);
                 }
             }
         }
+
         if ($defaultImagePath !== '' && file_exists($defaultImagePath)) {
-            return 'data:image/png;base64,' . base64_encode(file_get_contents($defaultImagePath));
+            $content = file_get_contents($defaultImagePath);
+            if ($content !== false) {
+                return 'data:image/png;base64,' . base64_encode($content);
+            }
         }
-        return ''; // Return empty string if no image found and no default
+
+        return '';
     }
 
-    private function GetFullUpdateMessage()
+    // Nachricht, die alle Elemente der HTML-Darstellung aktualisiert.
+    // Die Schlüssel-Reihenfolge ist Kontrakt: das Frontend verarbeitet sie in
+    // Einfügereihenfolge (z.B. muss nameswitch vor fontsize kommen).
+    private function GetFullUpdateMessage(): string
     {
         $result = [];
-        for ($i = 1; $i <= 5; $i++) {
-            $bewohnerID = $this->ReadPropertyInteger('Bewohner' . $i);
-            $result['Bewohner' . $i] = IPS_VariableExists($bewohnerID);
+
+        for ($i = 1; $i <= self::RESIDENT_COUNT; $i++) {
+            $result['Bewohner' . $i] = IPS_VariableExists($this->ReadPropertyInteger('Bewohner' . $i));
             $result['bewohner' . $i . 'altname'] = $this->ReadPropertyString('Bewohner' . $i . 'AltName');
         }
+
         $result['nameswitch'] = $this->ReadPropertyBoolean('NameSwitch');
         $result['DebugOutline'] = $this->ReadPropertyBoolean('DebugOutline');
         $result['fontsize'] = $this->ReadPropertyFloat('Schriftgroesse');
         $result['infontsize'] = $this->ReadPropertyFloat('InfoSchriftgroesse');
 
-        // Additional Info Variables
-        $AdditionalInfoIDs = [
-            $this->ReadPropertyInteger('AdditionalInfo1'),
-            $this->ReadPropertyInteger('AdditionalInfo2'),
-            $this->ReadPropertyInteger('AdditionalInfo3'),
-            $this->ReadPropertyInteger('AdditionalInfo4'),
-            $this->ReadPropertyInteger('AdditionalInfo5')
-        ];
-        for ($i = 0; $i < 5; $i++) {
-            $infoKey = 'info' . ($i + 1);
-            if (IPS_VariableExists($AdditionalInfoIDs[$i])) {
-                $result[$infoKey] = GetValueFormatted($AdditionalInfoIDs[$i]);
-            } else {
-                $result[$infoKey] = '';
-            }
+        for ($i = 1; $i <= self::RESIDENT_COUNT; $i++) {
+            $infoID = $this->ReadPropertyInteger('AdditionalInfo' . $i);
+            $result['info' . $i] = IPS_VariableExists($infoID) ? GetValueFormatted($infoID) : '';
         }
+
         $result['eckenradius'] = $this->ReadPropertyFloat('Eckenradius');
         $result['bildtransparenz'] = $this->ReadPropertyFloat('Bildtransparenz');
+        // -1 (transparent) ergibt '#FFFFFFFFFFFFFFFF' — das Frontend erkennt genau diesen
+        // Marker und setzt dann rgba(0,0,0,0).
         $result['kachelhintergrundfarbe'] = '#' . sprintf('%06X', $this->ReadPropertyInteger('Kachelhintergrundfarbe'));
         $result['imageMaxWidth'] = $this->ReadPropertyInteger('ImageMaxWidth');
 
-        // Hintergrundbild
-        $bgImageID = $this->ReadPropertyInteger('bgImage');
-        $defaultBgImagePath = __DIR__ . '/../imgs/kachelhintergrund1.png';
-
         if ($this->ReadPropertyBoolean('BG_Off')) {
-            // BG_Off is true, force the default background image
-            $result['bgimage'] = $this->_getBase64ImageData(0, $defaultBgImagePath); // Pass 0 to helper to explicitly request default
+            // Standard-Hintergrundbild erzwingen
+            $result['bgimage'] = $this->GetBase64ImageData(0, __DIR__ . '/../imgs/kachelhintergrund1.png');
         } else {
-            // BG_Off is false. Try to load custom image ONLY. No fallback to default image file.
-            $imageData = $this->_getBase64ImageData($bgImageID); // Call helper without defaultImagePath
-            if ($imageData !== '') { // Only set if a custom image was found and is valid
+            // Nur ein konfiguriertes Bild verwenden — ohne gültiges Bild bleibt der
+            // Schlüssel weg und die Kachel hat keinen Bildhintergrund.
+            $imageData = $this->GetBase64ImageData($this->ReadPropertyInteger('bgImage'));
+            if ($imageData !== '') {
                 $result['bgimage'] = $imageData;
             }
-            // If no valid custom image is found (imageData is ''), $result['bgimage'] remains unset, meaning no background.
         }
 
-        // Bewohner Daten und Bilder
         $defaultBewohnerImagePath = __DIR__ . '/assets/placeholder.png';
-        for ($i = 1; $i <= 5; $i++) {
+        for ($i = 1; $i <= self::RESIDENT_COUNT; $i++) {
             $bewohnerID = $this->ReadPropertyInteger('Bewohner' . $i);
-            if (IPS_VariableExists($bewohnerID)) {
-                $altNameKey = 'bewohner' . $i . 'altname';
-                if (!empty($result[$altNameKey])) {
-                    $result['name' . $i] = $result[$altNameKey];
-                } else {
-                    $result['name' . $i] = IPS_GetName($bewohnerID);
-                }
-                $result['value' . $i] = GetValueBoolean($bewohnerID);
-
-                $imageID = $this->ReadPropertyInteger('Bewohner' . $i . 'Image');
-                $result['image' . $i] = $this->_getBase64ImageData($imageID, $defaultBewohnerImagePath);
+            if (!IPS_VariableExists($bewohnerID)) {
+                continue;
             }
+
+            $altName = $result['bewohner' . $i . 'altname'];
+            $result['name' . $i] = $altName !== '' ? $altName : IPS_GetName($bewohnerID);
+            $result['value' . $i] = GetValueBoolean($bewohnerID);
+            $result['image' . $i] = $this->GetBase64ImageData(
+                $this->ReadPropertyInteger('Bewohner' . $i . 'Image'),
+                $defaultBewohnerImagePath
+            );
         }
-        return json_encode($result);
 
+        return (string)json_encode($result);
     }
-
-
 }
-
-?>
