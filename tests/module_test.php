@@ -5,6 +5,7 @@ require __DIR__ . '/bootstrap.php';
 set_error_handler(static function (int $severity, string $message, string $file, int $line): never {
     throw new ErrorException($message, 0, $severity, $file, $line);
 });
+check(defined('VM_CHANGEDLOCKED') === (getenv('RESIDENT_TEST_NO_LOCK_MESSAGE') !== '1'), 'Requested SDK constant availability is active');
 resident(10); resident(20, 'Arbeit');
 $m = new TileVisuresidencystatustile(); $m->Create();
 $m->properties['Bewohner1'] = 10; $m->properties['AdditionalInfo1'] = 20;
@@ -12,6 +13,7 @@ $runlevel = 0; $m->ApplyChanges();
 check($m->updates === [] && isset($m->messages[0]), 'Initialization waits for kernel');
 $runlevel = KR_READY; $m->MessageSink(0, 0, IPS_KERNELSTARTED, []);
 $initialSize = strlen(end($m->updates));
+check(in_array(10606, $m->messages[10], true) === defined('VM_CHANGEDLOCKED'), 'Optional lock notification subscribed only when available');
 check(latest($m)['Bewohner1'] && latest($m)['operable1'], 'Valid resident is visible and operable');
 $m->properties['Schriftgroesse'] = 20; $m->ApplyChanges();
 check(!isset(latest($m)['bgimage']) && !isset(latest($m)['image1']), 'Style update omits unchanged images');

@@ -5,9 +5,12 @@ Ohne Zugriff auf einen Symcon-Server aus dem Repository-Verzeichnis ausführen:
 ```sh
 php -l Bewohnerstatus/module.php
 php tests/module_test.php
+RESIDENT_TEST_NO_LOCK_MESSAGE=1 php tests/module_test.php
 node tests/frontend_test.js
 git diff --check
 ```
+
+Der zweite PHP-Lauf lässt `VM_CHANGEDLOCKED` absichtlich undefiniert und prüft damit Instanzerstellung, Kernelstart und Nachrichtenverarbeitung auch ohne diese optionale SDK-Konstante.
 
 Die PHP-Tests verwenden isolierte SDK-Doubles. Sie prüfen Kernelstart, Hintergrundentfernung, vollständige Initialzustände trotz Bild-Deltas, WebP und Medienänderungen, Umschaltung mit und ohne Aktion, Schreibschutz, Bedienungssperre, ungültige Zuordnungen, UTF-8, Script-Escaping, Wertebegrenzung, Konfigurationshinweise und Bildgrößenlimit.
 

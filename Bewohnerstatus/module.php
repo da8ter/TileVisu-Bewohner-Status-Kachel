@@ -5,6 +5,11 @@ declare(strict_types=1);
 class TileVisuresidencystatustile extends IPSModuleStrict
 {
     private const RESIDENT_COUNT = 5;
+    private const RESIDENT_REFRESH_MESSAGES = [
+        'OM_UNREGISTER', 'OM_CHANGETYPE', 'VM_CHANGEPROFILEACTION',
+        'VM_CHANGEDLOCKED', 'OM_CHANGEDISABLED', 'OM_CHANGEREADONLY'
+    ];
+    private const MEDIA_REFRESH_MESSAGES = ['MM_UPDATE', 'MM_CHANGEFILE', 'MM_AVAILABLE', 'OM_UNREGISTER'];
     private const MAX_IMAGE_BYTES = 5 * 1024 * 1024;
     private const IMAGE_TYPES = [
         'bmp' => 'image/bmp', 'jpg' => 'image/jpeg', 'jpeg' => 'image/jpeg',
@@ -62,8 +67,7 @@ class TileVisuresidencystatustile extends IPSModuleStrict
             return;
         }
 
-        if (in_array($Message, [MM_UPDATE, MM_CHANGEFILE, MM_AVAILABLE, OM_UNREGISTER,
-            OM_CHANGETYPE, VM_CHANGEPROFILEACTION, VM_CHANGEDLOCKED, OM_CHANGEDISABLED, OM_CHANGEREADONLY], true)) {
+        if (in_array($Message, $this->SupportedMessages(array_merge(self::MEDIA_REFRESH_MESSAGES, self::RESIDENT_REFRESH_MESSAGES)), true)) {
             $this->SendState();
             return;
         }
@@ -132,6 +136,19 @@ class TileVisuresidencystatustile extends IPSModuleStrict
     }
 
     // Referenzen und Nachrichten-Abos passend zur aktuellen Konfiguration neu aufbauen
+    private function SupportedMessages(array $names): array
+    {
+        // Optional SDK notifications differ between Symcon versions. Do not invent
+        // numeric fallbacks: only subscribe to messages provided by this runtime.
+        $messages = [];
+        foreach ($names as $name) {
+            if (defined($name)) {
+                $messages[] = constant($name);
+            }
+        }
+        return array_values(array_unique($messages));
+    }
+
     private function RegisterWatchedObjects(): void
     {
         foreach ($this->GetReferenceList() as $ref) {
@@ -153,10 +170,11 @@ class TileVisuresidencystatustile extends IPSModuleStrict
             }
         };
 
-        $mediaMessages = [MM_UPDATE, MM_CHANGEFILE, MM_AVAILABLE, OM_UNREGISTER];
+        $mediaMessages = $this->SupportedMessages(self::MEDIA_REFRESH_MESSAGES);
+        $residentMessages = array_merge([OM_CHANGENAME, VM_UPDATE], $this->SupportedMessages(self::RESIDENT_REFRESH_MESSAGES));
         $register($this->ReadPropertyInteger('bgImage'), $mediaMessages);
         for ($i = 1; $i <= self::RESIDENT_COUNT; $i++) {
-            $register($this->ReadPropertyInteger('Bewohner' . $i), [OM_CHANGENAME, VM_UPDATE, OM_UNREGISTER, OM_CHANGETYPE, VM_CHANGEPROFILEACTION, VM_CHANGEDLOCKED, OM_CHANGEDISABLED, OM_CHANGEREADONLY]);
+            $register($this->ReadPropertyInteger('Bewohner' . $i), $residentMessages);
             $register($this->ReadPropertyInteger('AdditionalInfo' . $i), [VM_UPDATE, OM_UNREGISTER]);
             $register($this->ReadPropertyInteger('Bewohner' . $i . 'Image'), $mediaMessages);
         }
