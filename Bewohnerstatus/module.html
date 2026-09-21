@@ -1,18 +1,18 @@
 <!DOCTYPE html>
 <html>
+<!-- Status and operation remain authoritative on the server. -->
 
 <head>
 
     <style>
-/* Debug outline - nur aktiv, wenn debug-outline CSS-Variable auf 1px gesetzt ist */
-*, *::before, *::after {
-  outline: var(--debug-outline, 0px) solid red !important;
-}
-
-/* Spezielle gelbe Outline für den Container im Debug-Modus */
-[style*="--debug-outline: 1px"] .container_anwesenheit {
-  outline: 1px solid yellow !important;
-}
+        .debug-outline *, .debug-outline *::before, .debug-outline *::after {
+            outline: 1px solid red;
+        }
+        .debug-outline .container_anwesenheit { outline-color: yellow; }
+        .image-wrapper:focus-visible {
+            outline: 3px solid currentColor;
+            outline-offset: 2px;
+        }
 
         html {
             background-color: var(--hintergrundfarbe);
@@ -40,13 +40,13 @@
         }
 
         .hidden {
-            display: none;
+            display: none !important;
         }
 
         .container_anwesenheit {
             width: 100%;
             display: grid;
-            /* jede Spalte ist min. 100 px breit, sonst teilt sich der freie Platz gleichmäßig */
+            /* Kleine Kacheln umbrechen lassen; Text darf die Spalten nicht verbreitern. */
             grid-template-columns: repeat(auto-fit, minmax(50px, 1fr));
             gap: 10px;
             justify-items: center;
@@ -57,22 +57,23 @@
             padding-bottom: 0px;
         }
 
-        .Bewohner1,
-        .Bewohner2,
-        .Bewohner3,
-        .Bewohner4,
-        .Bewohner5 {
+        .bewohner_div {
             display: flex;
             flex-direction: column;
             align-items: center;
             justify-content: flex-start;
             width: 100%;
-            /* nimmt volle Zellenbreite an */
+            min-width: 0;
             gap: 5px; /* Abstand zwischen Bild-Wrapper und Text */
         }
 
         .image-wrapper {
-            position: relative; /* Behalten, falls zukünftig für andere Zwecke benötigt */
+            padding: 0;
+            border: 0;
+            background: transparent;
+            color: inherit;
+            cursor: pointer;
+            border-radius: var(--corner-radius, 50%);
             display: flex;
             align-items: center; /* Vertikale Zentrierung des Kind-Elements (img) */
             justify-content: center; /* Horizontale Zentrierung des Kind-Elements (img) */
@@ -84,9 +85,11 @@
             overflow: hidden; /* Verhindert, dass übergroße Inhalte vor object-fit sichtbar sind */
         }
 
+        .image-wrapper:disabled { cursor: default; }
+
         .name {
             text-align: center;
-            font-size: 10px;
+            font-size: var(--name-font-size, 10px);
             width: 100%; /* Stellt sicher, dass die Zentrierung über die volle Breite erfolgt */
             line-height: 1.2;
             /* word-break: break-word; removed as nowrap is used for ellipsis */
@@ -96,7 +99,7 @@
         }
         .info {
             text-align: center;
-            font-size: 10px;
+            font-size: var(--info-font-size, 8px);
             opacity: 0.5;
             width: 100%; /* Stellt sicher, dass die Zentrierung über die volle Breite erfolgt */
             line-height: 1.2;
@@ -112,7 +115,7 @@
             max-width: 100%; /* Stellt sicher, dass das Bild nicht breiter als der Wrapper ist */
             max-height: 100%; /* Stellt sicher, dass das Bild nicht höher als der Wrapper ist */
             object-fit: contain; /* Zeigt das gesamte Bild, behält Seitenverhältnis bei und zentriert es innerhalb seiner Box */
-            border-radius: 50%; /* Macht das Bild rund */
+            border-radius: var(--corner-radius, 50%);
         }
 
         .color {
@@ -130,172 +133,100 @@
 
     <script>
         function handleMessage(data) {
-            //console.log('Rohdaten empfangen:', data);
-
-            const decodedData = JSON.parse(data);
-            //console.log('Decodierte Daten:', decodedData);
-
-            for (const parameter in decodedData) {
-                //console.log('Aktueller Parameter:', parameter, 'Wert:', decodedData[parameter]);
-
-                const element = document.getElementById(parameter);
-                var root = document.documentElement;
-                // Abhängig vom Parameter werden allerdings verschiedene Werte angepasst
-                switch (parameter) {
-                    case 'Bewohner1':
-                    case 'Bewohner2':
-                    case 'Bewohner3':
-                    case 'Bewohner4':
-                    case 'Bewohner5':
-                        //console.log('Anpassung der Sichtbarkeit für', parameter);
-                        element.className = decodedData[parameter] ? parameter : 'hidden';
-                        break;
-
-                    case 'image1':
-                    case 'image2':
-                    case 'image3':
-                    case 'image4':
-                    case 'image5':
-                        element.src = decodedData[parameter];
-                        break;
-
-                    case 'value1':
-                    case 'value2':
-                    case 'value3':
-                    case 'value4':
-                    case 'value5':
-                        document.getElementById('image' + parameter.slice(5)).className = decodedData[parameter] ? 'color' : 'grey';
-                        break;
-
-                    case 'name1':
-                    case 'name2':
-                    case 'name3':
-                    case 'name4':
-                    case 'name5':
-                        element.textContent = decodedData[parameter];
-                        break;
-
-                    case 'nameswitch':
-                        for (let i = 1; i <= 5; i++) {
-                            document.getElementById('name' + i).className = decodedData[parameter] ? 'name' : 'hidden';
-                        }
-                        break;
-
-                    case 'fontsize':
-                        const nameElements = document.querySelectorAll('.name');
-                        nameElements.forEach(element => {
-                            element.style.fontSize = decodedData[parameter] + 'px';
-                        });
-                        break;
-                    case 'infontsize':
-                        const infoElements = document.querySelectorAll('.info');
-                        infoElements.forEach(element => {
-                            element.style.fontSize = decodedData[parameter] + 'px';
-                        });
-                        break;
-                    case 'eckenradius':
-                        const cornerElements = document.querySelectorAll('.color, .grey');
-                        cornerElements.forEach(element => {
-                            element.style.borderRadius = decodedData[parameter] + '%';
-                        });
-                        break;
-                    case 'bgimage':
-                        const mainDivBg = document.querySelector('body'); // Variable umbenannt zur Klarheit
-                        const bgImageValue = decodedData[parameter];
-                        if (bgImageValue && bgImageValue !== '') {
-                            mainDivBg.style.setProperty('--background-image', 'url(' + bgImageValue + ')');
-                        } else {
-                            mainDivBg.style.setProperty('--background-image', 'none'); // Explizit kein Hintergrundbild setzen
-                        }
-                        break;
-                    case 'imageMaxWidth':
-                        root.style.setProperty('--image-max-width', decodedData[parameter] + '%');
-                        break;
-                    case 'bildtransparenz':
-                        root.style.setProperty('--bildtransparenz', decodedData[parameter]);
-                        break;
-                    case 'kachelhintergrundfarbe':
-
-                        if (decodedData[parameter] === '#FFFFFFFFFFFFFFFF') {
-                            root.style.setProperty('--hintergrundfarbe', 'rgba(0, 0, 0, 0)');
-                        }
-                        else {
-                            root.style.setProperty('--hintergrundfarbe', decodedData[parameter]);
-                        }
-                        break;
-                    case 'DebugOutline':
-                        // Setze die Debug-Outline Variable basierend auf dem Checkbox-Wert
-                        if (decodedData[parameter]) {
-                            root.style.setProperty('--debug-outline', '1px');
-                        } else {
-                            root.style.setProperty('--debug-outline', '0px');
-                        }
-                        break;
-                    case 'info1':
-                    case 'info2':
-                    case 'info3':
-                    case 'info4':
-                    case 'info5':
-                        var infoDiv = document.getElementById(parameter);
-                        infoDiv.textContent = decodedData[parameter];
-                        if (decodedData[parameter] && decodedData[parameter] !== '') {
-                            infoDiv.className = 'info';
-                        } else {
-                            infoDiv.className = 'info hidden';
-                        }
-                        // Set font size from infontsize if available
-                        if ('infontsize' in decodedData) {
-                            infoDiv.style.fontSize = decodedData['infontsize'] + 'px';
-                        }
-                        break;
-                    default:
-
-                        break;
+            let update;
+            try {
+                update = JSON.parse(data);
+            } catch (error) {
+                console.warn('Invalid resident tile update', error);
+                return;
+            }
+            if (!update || typeof update !== 'object' || Array.isArray(update)) return;
+            const root = document.documentElement;
+            const variables = {
+                fontsize: ['--name-font-size', 'px'],
+                infontsize: ['--info-font-size', 'px'],
+                eckenradius: ['--corner-radius', '%'],
+                imageMaxWidth: ['--image-max-width', '%'],
+                bildtransparenz: ['--bildtransparenz', ''],
+                kachelhintergrundfarbe: ['--hintergrundfarbe', '']
+            };
+            for (const [key, [property, unit]] of Object.entries(variables)) {
+                if (Object.prototype.hasOwnProperty.call(update, key)) root.style.setProperty(property, update[key] + unit);
+            }
+            if (Object.prototype.hasOwnProperty.call(update, 'bgimage')) {
+                document.body.style.setProperty('--background-image', update.bgimage ? 'url(' + update.bgimage + ')' : 'none');
+            }
+            if (Object.prototype.hasOwnProperty.call(update, 'DebugOutline')) root.classList.toggle('debug-outline', !!update.DebugOutline);
+            for (let i = 1; i <= 5; i++) {
+                const resident = document.getElementById('Bewohner' + i);
+                const name = document.getElementById('name' + i);
+                const info = document.getElementById('info' + i);
+                const image = document.getElementById('image' + i);
+                const button = document.getElementById('button' + i);
+                if (Object.prototype.hasOwnProperty.call(update, 'Bewohner' + i)) resident.classList.toggle('hidden', !update['Bewohner' + i]);
+                if (Object.prototype.hasOwnProperty.call(update, 'nameswitch')) name.classList.toggle('hidden', !update.nameswitch);
+                if (Object.prototype.hasOwnProperty.call(update, 'name' + i)) {
+                    name.textContent = update['name' + i];
+                    button.setAttribute('aria-label', update['name' + i]);
                 }
-
+                if (Object.prototype.hasOwnProperty.call(update, 'info' + i)) {
+                    info.textContent = update['info' + i];
+                    info.classList.toggle('hidden', update['info' + i] === '');
+                }
+                if (Object.prototype.hasOwnProperty.call(update, 'image' + i)) {
+                    if (update['image' + i]) image.src = update['image' + i];
+                    else image.removeAttribute('src');
+                }
+                if (Object.prototype.hasOwnProperty.call(update, 'value' + i)) {
+                    const present = !!update['value' + i];
+                    image.classList.toggle('color', present);
+                    image.classList.toggle('grey', !present);
+                    button.setAttribute('aria-pressed', String(present));
+                }
+                if (Object.prototype.hasOwnProperty.call(update, 'operable' + i)) button.disabled = !update['operable' + i];
             }
         }
     </script>
 
 
     <div class="container_anwesenheit" id="container">
-        <div class="bewohner_div" id="Bewohner1">
-            <div class="image-wrapper">
-                <img class="color" id="image1" onclick="requestAction('Bewohner1', 1);">
-            </div>
-            <div class="hidden" id="name1">1</div>
+        <div class="bewohner_div hidden" id="Bewohner1">
+            <button type="button" class="image-wrapper" id="button1" disabled aria-pressed="false" aria-describedby="info1" onclick="requestAction('Bewohner1', 1);">
+                <img class="color" id="image1" alt="">
+            </button>
+            <div class="name hidden" id="name1"></div>
             <div class="info hidden" id="info1"></div>
         </div>
 
-        <div class="bewohner_div" id="Bewohner2">
-            <div class="image-wrapper">
-                <img class="color" id="image2" onclick="requestAction('Bewohner2', 1);">
-            </div>
-            <div class="hidden" id="name2">2</div>
+        <div class="bewohner_div hidden" id="Bewohner2">
+            <button type="button" class="image-wrapper" id="button2" disabled aria-pressed="false" aria-describedby="info2" onclick="requestAction('Bewohner2', 1);">
+                <img class="color" id="image2" alt="">
+            </button>
+            <div class="name hidden" id="name2"></div>
             <div class="info hidden" id="info2"></div>
         </div>
 
-        <div class="bewohner_div" id="Bewohner3">
-            <div class="image-wrapper">
-                <img class="color" id="image3" onclick="requestAction('Bewohner3', 1);">
-            </div>
-            <div class="hidden" id="name3">3</div>
+        <div class="bewohner_div hidden" id="Bewohner3">
+            <button type="button" class="image-wrapper" id="button3" disabled aria-pressed="false" aria-describedby="info3" onclick="requestAction('Bewohner3', 1);">
+                <img class="color" id="image3" alt="">
+            </button>
+            <div class="name hidden" id="name3"></div>
             <div class="info hidden" id="info3"></div>
         </div>
 
-        <div class="bewohner_div" id="Bewohner4">
-            <div class="image-wrapper">
-                <img class="color" id="image4" onclick="requestAction('Bewohner4', 1);">
-            </div>
-            <div class="hidden" id="name4">4</div>
+        <div class="bewohner_div hidden" id="Bewohner4">
+            <button type="button" class="image-wrapper" id="button4" disabled aria-pressed="false" aria-describedby="info4" onclick="requestAction('Bewohner4', 1);">
+                <img class="color" id="image4" alt="">
+            </button>
+            <div class="name hidden" id="name4"></div>
             <div class="info hidden" id="info4"></div>
         </div>
 
-        <div class="bewohner_div" id="Bewohner5">
-            <div class="image-wrapper">
-                <img class="color" id="image5" onclick="requestAction('Bewohner5', 1);">
-            </div>
-            <div class="hidden" id="name5">5</div>
+        <div class="bewohner_div hidden" id="Bewohner5">
+            <button type="button" class="image-wrapper" id="button5" disabled aria-pressed="false" aria-describedby="info5" onclick="requestAction('Bewohner5', 1);">
+                <img class="color" id="image5" alt="">
+            </button>
+            <div class="name hidden" id="name5"></div>
             <div class="info hidden" id="info5"></div>
         </div>
     </div>

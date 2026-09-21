@@ -36,7 +36,11 @@
             "Display name": "Name anzeigen",
             "Lock operation": "Bedienung sperren",
             "Donations / Gifts": "Spenden / Schenkungen",
-            "Say thank you and support the developer of this module:": "Sag Danke und unterstütze den Entwickler dieses Moduls:"
+            "Say thank you and support the developer of this module:": "Sag Danke und unterstütze den Entwickler dieses Moduls:",
+            "Select an existing Boolean variable.": "Bitte eine vorhandene Boolean-Variable auswählen.",
+            "Select an existing variable.": "Bitte eine vorhandene Variable auswählen.",
+            "Select an image: PNG, JPEG, GIF, BMP, ICO or WebP.": "Bitte ein Bild auswählen: PNG, JPEG, GIF, BMP, ICO oder WebP.",
+            "Image is empty or exceeds 5 MiB.": "Das Bild ist leer oder größer als 5 MiB."
         }
     }
 }
