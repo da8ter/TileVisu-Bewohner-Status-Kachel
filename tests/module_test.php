@@ -62,3 +62,32 @@ $m->properties['Bewohner1Image']=0; $m->ApplyChanges();
 check(!isset($m->messages[30], $m->references[30]), 'Obsolete media watches removed');
 unset($variables[10]); $m->MessageSink(0,10,OM_UNREGISTER,[]);
 check(!latest($m)['Bewohner1'] && latest($m)['image1'] === '', 'Deleted resident hidden and image cleared');
+
+// Each source is below 5 MiB, but their combined base64 output exceeds the
+// runtime buffer. Slash-heavy data also exercises nested JSON transport escaping.
+$large = new TileVisuresidencystatustile(); $large->Create();
+$large->properties['BG_Off'] = false;
+for ($i = 1; $i <= 5; $i++) {
+    resident(100 + $i);
+    $large->properties['Bewohner' . $i] = 100 + $i;
+    $large->properties['Bewohner' . $i . 'Image'] = 200 + $i;
+    $media[200 + $i] = ['MediaType' => 1, 'MediaFile' => 'photo.jpg', 'content' => base64_encode(str_repeat("\xff", 700000))];
+}
+$large->properties['bgImage'] = 206;
+$media[206] = ['MediaType' => 1, 'MediaFile' => 'background.jpg', 'content' => base64_encode(str_repeat("\xff", 1500000))];
+$large->ApplyChanges();
+$state = snapshot($large);
+$imageKeys = ['bgimage','image1','image2','image3','image4','image5'];
+$sum = array_sum(array_map(static fn($key) => strlen($state[$key]), $imageKeys));
+check($sum <= 2 * 1024 * 1024, 'Combined image budget respected');
+$html = $large->GetVisualizationTile();
+$transportSize = strlen(json_encode(['jsonrpc'=>'2.0','result'=>$html,'id'=>1], JSON_THROW_ON_ERROR));
+check($transportSize < 5048576, 'HTML plus nested JSON transport below reported output limit');
+check(strlen(json_encode(end($large->updates), JSON_THROW_ON_ERROR)) < 5048576, 'Full update plus transport below output limit');
+check(str_contains($large->GetConfigurationForm(), 'Tile image budget exceeded'), 'Combined budget warning appears in configuration');
+check($state['Bewohner1'] && $state['Bewohner5'], 'Large images do not hide resident status');
+$large->ApplyChanges(); check(!isset(latest($large)['image1']), 'Budgeted images still use delta caching');
+$media[201]['content'] = base64_encode('small replacement');
+$large->MessageSink(0,201,MM_UPDATE,[]);
+check(latest($large)['image1'] === 'data:image/jpeg;base64,' . base64_encode('small replacement'), 'Reducing an image restores it automatically');
+echo 'Worst-case image fixture transport: ' . $transportSize . ' bytes' . PHP_EOL;

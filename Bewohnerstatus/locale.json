@@ -39,7 +39,8 @@
             "Select an existing Boolean variable.": "Bitte eine vorhandene Boolean-Variable auswählen.",
             "Select an existing variable.": "Bitte eine vorhandene Variable auswählen.",
             "Select an image: PNG, JPEG, GIF, BMP, ICO or WebP.": "Bitte ein Bild auswählen: PNG, JPEG, GIF, BMP, ICO oder WebP.",
-            "Image is empty or exceeds 5 MiB.": "Das Bild ist leer oder größer als 5 MiB."
+            "Image is empty or exceeds 5 MiB.": "Das Bild ist leer oder größer als 5 MiB.",
+            "Tile image budget exceeded (2 MiB including Base64). Reduce these images; placeholders are used and oversized backgrounds are hidden.": "Das Bildbudget der Kachel ist überschritten (2 MiB einschließlich Base64). Bitte diese Bilder verkleinern; Bewohnerfotos werden durch Platzhalter ersetzt und zu große Hintergründe ausgeblendet."
         }
     }
 }

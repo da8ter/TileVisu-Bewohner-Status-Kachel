@@ -11,6 +11,9 @@ class TileVisuresidencystatustile extends IPSModuleStrict
     ];
     private const MEDIA_REFRESH_MESSAGES = ['MM_UPDATE', 'MM_CHANGEFILE', 'MM_AVAILABLE', 'OM_UNREGISTER'];
     private const MAX_IMAGE_BYTES = 5 * 1024 * 1024;
+    // Includes base64 expansion across ALL images. Leave room for HTML, JSON
+    // and transport escaping below Symcon's roughly 5 MB output buffer.
+    private const MAX_TILE_IMAGE_BYTES = 2 * 1024 * 1024;
     private const IMAGE_TYPES = [
         'bmp' => 'image/bmp', 'jpg' => 'image/jpeg', 'jpeg' => 'image/jpeg',
         'gif' => 'image/gif', 'png' => 'image/png', 'ico' => 'image/x-icon',
@@ -210,7 +213,7 @@ class TileVisuresidencystatustile extends IPSModuleStrict
     }
 
     // Every initial render gets a complete snapshot. Broadcasts omit unchanged images.
-    private function GetFullUpdateData(): array
+    private function GetFullUpdateData(array &$limitedImages = []): array
     {
         $result = [];
         $result['nameswitch'] = $this->ReadPropertyBoolean('NameSwitch');
@@ -255,7 +258,36 @@ class TileVisuresidencystatustile extends IPSModuleStrict
             );
         }
 
+        $limitedImages = $this->LimitImagePayload($result);
         return $result;
+    }
+
+    private function LimitImagePayload(array &$data): array
+    {
+        $sizes = [];
+        foreach ($data as $key => $value) {
+            if ($key === 'bgimage' || preg_match('/\Aimage[1-5]\z/', $key) === 1) {
+                $sizes[$key] = strlen($value);
+            }
+        }
+        $total = array_sum($sizes);
+        arsort($sizes, SORT_NUMERIC);
+        $limited = [];
+        $placeholder = $this->GetBase64ImageData(0, __DIR__ . '/assets/placeholder.png');
+        // Replace the largest images first, keeping as many small photos as possible.
+        foreach ($sizes as $key => $size) {
+            if ($total <= self::MAX_TILE_IMAGE_BYTES) {
+                break;
+            }
+            $replacement = $key === 'bgimage' ? '' : $placeholder;
+            if ($size <= strlen($replacement)) {
+                continue;
+            }
+            $data[$key] = $replacement;
+            $total -= $size - strlen($replacement);
+            $limited[] = $key === 'bgimage' ? 'bgImage' : 'Bewohner' . substr($key, 5) . 'Image';
+        }
+        return $limited;
     }
 
     private function IsResidentVariable(int $id): bool
@@ -289,7 +321,7 @@ class TileVisuresidencystatustile extends IPSModuleStrict
     private function EncodeJSON(mixed $data): string
     {
         try {
-            return json_encode($data, JSON_INVALID_UTF8_SUBSTITUTE | JSON_HEX_TAG | JSON_THROW_ON_ERROR);
+            return json_encode($data, JSON_INVALID_UTF8_SUBSTITUTE | JSON_UNESCAPED_SLASHES | JSON_HEX_TAG | JSON_THROW_ON_ERROR);
         } catch (JsonException $e) {
             $this->LogMessage('Visualization JSON: ' . $e->getMessage(), KL_ERROR);
             return '{}';
@@ -346,6 +378,11 @@ class TileVisuresidencystatustile extends IPSModuleStrict
                     $warnings[] = $property . ': ' . $this->Translate('Image is empty or exceeds 5 MiB.');
                 }
             }
+        }
+        $limitedImages = [];
+        $this->GetFullUpdateData($limitedImages);
+        if ($limitedImages !== []) {
+            $warnings[] = implode(', ', $limitedImages) . ': ' . $this->Translate('Tile image budget exceeded (2 MiB including Base64). Reduce these images; placeholders are used and oversized backgrounds are hidden.');
         }
         if ($warnings !== []) {
             array_unshift($form['elements'], ['type' => 'Label', 'caption' => implode("\n", $warnings)]);

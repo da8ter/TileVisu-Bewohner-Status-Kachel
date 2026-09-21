@@ -32,3 +32,7 @@ Vor einer Veröffentlichung in einer Symcon-Testinstanz prüfen:
 Lokale Prüfung mit PHP 8.5.7 und Node.js erfolgreich. Die Testansicht im Codex-Browser wurde mit fünf Bewohnern bei Standardgröße und 320 × 180 Pixeln geprüft. Tab fokussiert den ersten Bewohner; Enter und Leertaste schalten den simulierten Status und aktualisieren den zugänglichen Zustand. Der Fokusrahmen ist sichtbar. Dabei wurden ausschließlich Testdaten und eine simulierte Aktion verwendet, keine echten Symcon-Variablen.
 
 Das Standardhintergrundbild bleibt unverändert. Die Übertragungsoptimierung erfolgt durch Bild-Deltas; im Testszenario sinkt ein reines Gestaltungsupdate von 297.890 auf 545 Byte. Die vollständige Erstübertragung bleibt erforderlich.
+
+## Gesamtes Bildbudget
+
+Der Test mit fünf großen Fotos plus Hintergrund prüft die Summe aller Base64-Bilder, den vollständigen HTML-Aufruf inklusive zusätzlicher JSON-RPC-Kodierung sowie Update-Nachrichten gegen das gemeldete Limit von 5.048.576 Byte. Besonders viele `/`-Zeichen simulieren ungünstiges JSON-Escaping. Größte Bilder werden bei Budgetüberschreitung ersetzt; nach Verkleinerung der Quelldatei werden sie automatisch wieder angezeigt. Die Originalmedien werden nicht verändert.

@@ -83,7 +83,13 @@ function check(bool $condition, string $label): void {
 }
 function latest(IPSModuleStrict $module): array { return json_decode(end($module->updates), true, 512, JSON_THROW_ON_ERROR); }
 function snapshot(TileVisuresidencystatustile $module): array {
-    preg_match('/<script>handleMessage\((.*?)\);<\/script>/s', $module->GetVisualizationTile(), $matches);
-    return json_decode(json_decode($matches[1], true, 512, JSON_THROW_ON_ERROR), true, 512, JSON_THROW_ON_ERROR);
+    $html = $module->GetVisualizationTile();
+    $prefix = '<script>handleMessage(';
+    $start = strrpos($html, $prefix);
+    if ($start === false) throw new RuntimeException('Missing initial state');
+    $start += strlen($prefix);
+    $end = strpos($html, ');</script>', $start);
+    if ($end === false) throw new RuntimeException('Incomplete initial state');
+    return json_decode(json_decode(substr($html, $start, $end - $start), true, 512, JSON_THROW_ON_ERROR), true, 512, JSON_THROW_ON_ERROR);
 }
 require __DIR__ . '/../Bewohnerstatus/module.php';
