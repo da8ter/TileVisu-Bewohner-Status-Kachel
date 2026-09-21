@@ -214,7 +214,8 @@ class TileVisuresidencystatustile extends IPSModuleStrict
     {
         $result = [];
         $result['nameswitch'] = $this->ReadPropertyBoolean('NameSwitch');
-        $result['DebugOutline'] = $this->ReadPropertyBoolean('DebugOutline');
+        // Clear outlines even when an older configuration still has DebugOutline enabled.
+        $result['DebugOutline'] = false;
         $result['fontsize'] = $this->BoundedFloat('Schriftgroesse', 1, 50, 10);
         $result['infontsize'] = $this->BoundedFloat('InfoSchriftgroesse', 1, 50, 8);
 

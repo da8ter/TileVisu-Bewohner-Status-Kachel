@@ -74,7 +74,7 @@ Numerische Darstellungswerte werden serverseitig auf die Formulargrenzen begrenz
 
 Die Instanz als Kachel in die Kachelvisualisierung aufnehmen. Bedienbare Bewohnerbilder sind mit Tab erreichbar und lassen sich mit Enter oder Leertaste betätigen. Ein sichtbarer Fokusrahmen und der gedrückt-Zustand machen die Bedienung zugänglich. Die Namen bleiben für assistive Technologien erhalten, auch wenn die sichtbaren Namen ausgeschaltet sind.
 
-Die maximale Bildbreite ist von 10 bis 100 Prozent einstellbar (Standard: 80 Prozent). Die Debug-Option blendet Umrisse ein und ist normalerweise ausgeschaltet.
+Die maximale Bildbreite ist von 10 bis 100 Prozent einstellbar (Standard: 80 Prozent).
 
 ### 7. PHP-Befehlsreferenz
 

@@ -293,11 +293,6 @@
             ]
         },
         {
-            "type": "CheckBox",
-            "name": "DebugOutline",
-            "caption": "Debug: Show red outline (1px) around all HTML elements"
-        },
-        {
             "type": "Label",
             "caption": ""
         },
