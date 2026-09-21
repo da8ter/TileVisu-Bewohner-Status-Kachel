@@ -11,8 +11,10 @@ class TileVisuresidencystatustile extends IPSModuleStrict
     ];
     private const MEDIA_REFRESH_MESSAGES = ['MM_UPDATE', 'MM_CHANGEFILE', 'MM_AVAILABLE', 'OM_UNREGISTER'];
     private const MAX_IMAGE_BYTES = 5 * 1024 * 1024;
-    // Includes base64 expansion across ALL images. Leave room for HTML, JSON
-    // and transport escaping below Symcon's roughly 5 MB output buffer.
+    private const THUMBNAIL_EDGE = 512;
+    private const MAX_THUMBNAIL_BYTES = 128 * 1024;
+    private const MAX_DECODE_PIXELS = 24000000;
+    // Includes base64 expansion across all images, leaving transport headroom.
     private const MAX_TILE_IMAGE_BYTES = 2 * 1024 * 1024;
     private const IMAGE_TYPES = [
         'bmp' => 'image/bmp', 'jpg' => 'image/jpeg', 'jpeg' => 'image/jpeg',
@@ -183,7 +185,7 @@ class TileVisuresidencystatustile extends IPSModuleStrict
         }
     }
 
-    private function GetBase64ImageData(int $imageID, string $defaultImagePath = ''): string
+    private function GetBase64ImageData(int $imageID, string $defaultImagePath = '', int $residentSlot = 0): string
     {
         if (IPS_MediaExists($imageID)) {
             $image = IPS_GetMedia($imageID);
@@ -191,8 +193,14 @@ class TileVisuresidencystatustile extends IPSModuleStrict
                 $mime = self::IMAGE_TYPES[strtolower(pathinfo($image['MediaFile'], PATHINFO_EXTENSION))] ?? '';
                 if ($mime !== '') {
                     $content = IPS_GetMediaContent($imageID);
-                    // Bound transport size without requiring GD or changing the source media.
+                    // Bound source size before optional resident thumbnail generation.
                     if ($content !== '' && strlen($content) <= 4 * (int)ceil(self::MAX_IMAGE_BYTES / 3)) {
+                        if ($residentSlot > 0) {
+                            $thumbnail = $this->ResidentThumbnail($content, $residentSlot);
+                            if ($thumbnail !== '') {
+                                return $thumbnail;
+                            }
+                        }
                         return 'data:' . $mime . ';base64,' . $content;
                     }
                     $this->SendDebug('Image', 'Empty or oversized image: ' . $imageID, 0);
@@ -209,6 +217,108 @@ class TileVisuresidencystatustile extends IPSModuleStrict
             }
         }
 
+        return '';
+    }
+
+    private function ResidentThumbnail(string $base64, int $slot): string
+    {
+        if (!function_exists('imagecreatefromstring') || !function_exists('imagepng')) {
+            return ''; // GD is optional. The combined output budget remains enforced.
+        }
+        $cacheKey = 'ResidentThumbnail' . $slot;
+        $hash = hash('sha256', 'v1:' . $base64);
+        $cached = json_decode($this->GetBuffer($cacheKey), true);
+        if (is_array($cached) && ($cached['hash'] ?? '') === $hash) {
+            return $cached['image'];
+        }
+        $thumbnail = $this->CreateThumbnail($base64);
+        // At most five small thumbnails, including negative results. A content
+        // change invalidates the entry even when the media ID stays the same.
+        $this->SetBuffer($cacheKey, $this->EncodeJSON(['hash' => $hash, 'image' => $thumbnail]));
+        return $thumbnail;
+    }
+
+    private function CreateThumbnail(string $base64): string
+    {
+        $bytes = base64_decode($base64, true);
+        if ($bytes === false) {
+            return '';
+        }
+        // Convert GD warnings into a controlled fallback; never leak binary data
+        // or decoder warnings into the visualization's output buffer.
+        set_error_handler(static function (int $severity, string $message): never {
+            throw new ErrorException($message, 0, $severity);
+        });
+        try {
+            $size = getimagesizefromstring($bytes);
+            if ($size === false || $size[0] < 1 || $size[1] < 1 || $size[0] * $size[1] > self::MAX_DECODE_PIXELS) {
+                return '';
+            }
+            // Reserve decoder/rotation memory before allocating a full raster.
+            $estimated = $size[0] * $size[1] * 12 + strlen($bytes) * 2 + 16 * 1024 * 1024;
+            $limit = trim((string)ini_get('memory_limit'));
+            $unit = strtolower(substr($limit, -1));
+            $limitBytes = (int)$limit * match ($unit) { 'g' => 1073741824, 'm' => 1048576, 'k' => 1024, default => 1 };
+            if ($limitBytes > 0 && memory_get_usage(true) + $estimated > $limitBytes) {
+                return '';
+            }
+            $source = imagecreatefromstring($bytes);
+            if ($source === false) {
+                return '';
+            }
+            // GD does not apply JPEG EXIF orientation automatically.
+            if ($size[2] === IMAGETYPE_JPEG && function_exists('exif_read_data')) {
+                $input = fopen('php://temp', 'w+b');
+                if ($input !== false) {
+                    try {
+                        fwrite($input, $bytes);
+                        rewind($input);
+                        $exif = exif_read_data($input);
+                        $orientation = (int)($exif['Orientation'] ?? 1);
+                        if (in_array($orientation, [2, 5, 7], true)) imageflip($source, IMG_FLIP_HORIZONTAL);
+                        if ($orientation === 4) imageflip($source, IMG_FLIP_VERTICAL);
+                        $angle = match ($orientation) { 3 => 180, 5, 8 => 90, 6, 7 => -90, default => 0 };
+                        if ($angle !== 0) {
+                            $rotated = imagerotate($source, $angle, 0);
+                            if ($rotated !== false) $source = $rotated;
+                        }
+                    } catch (Throwable $e) {
+                        // Missing or malformed EXIF must not prevent resizing.
+                    } finally {
+                        fclose($input);
+                    }
+                }
+            }
+            $width = imagesx($source);
+            $height = imagesy($source);
+            $useWebP = function_exists('imagewebp') && (imagetypes() & IMG_WEBP) !== 0;
+            for ($edge = self::THUMBNAIL_EDGE; $edge >= 64; $edge = intdiv($edge, 2)) {
+                $scale = min(1, $edge / max($width, $height));
+                $w = max(1, (int)round($width * $scale));
+                $h = max(1, (int)round($height * $scale));
+                $target = imagecreatetruecolor($w, $h);
+                imagealphablending($target, false);
+                imagesavealpha($target, true);
+                imagefilledrectangle($target, 0, 0, $w - 1, $h - 1, imagecolorallocatealpha($target, 0, 0, 0, 127));
+                if (!imagecopyresampled($target, $source, 0, 0, 0, 0, $w, $h, $width, $height)) return '';
+                $output = fopen('php://temp', 'w+b');
+                if ($output === false) return '';
+                try {
+                    $ok = $useWebP ? imagewebp($target, $output, 82) : imagepng($target, $output, 6);
+                    rewind($output);
+                    $encoded = stream_get_contents($output);
+                } finally {
+                    fclose($output);
+                }
+                if ($ok && $encoded !== false && $encoded !== '' && strlen($encoded) <= self::MAX_THUMBNAIL_BYTES) {
+                    return 'data:image/' . ($useWebP ? 'webp' : 'png') . ';base64,' . base64_encode($encoded);
+                }
+            }
+        } catch (Throwable $e) {
+            $this->SendDebug('Thumbnail', $e->getMessage(), 0);
+        } finally {
+            restore_error_handler();
+        }
         return '';
     }
 
@@ -254,7 +364,8 @@ class TileVisuresidencystatustile extends IPSModuleStrict
             $result['value' . $i] = GetValueBoolean($bewohnerID);
             $result['image' . $i] = $this->GetBase64ImageData(
                 $this->ReadPropertyInteger('Bewohner' . $i . 'Image'),
-                $defaultBewohnerImagePath
+                $defaultBewohnerImagePath,
+                $i
             );
         }
 
@@ -349,6 +460,9 @@ class TileVisuresidencystatustile extends IPSModuleStrict
     {
         $form = json_decode(file_get_contents(__DIR__ . '/form.json'), true, 512, JSON_THROW_ON_ERROR);
         $warnings = [];
+        if (!function_exists('imagecreatefromstring') || !function_exists('imagepng')) {
+            $warnings[] = $this->Translate('PHP GD is unavailable. Resident photos cannot be resized automatically.');
+        }
         for ($i = 1; $i <= self::RESIDENT_COUNT; $i++) {
             $id = $this->ReadPropertyInteger('Bewohner' . $i);
             if ($id !== 0 && !$this->IsResidentVariable($id)) {

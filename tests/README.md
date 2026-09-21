@@ -5,6 +5,7 @@ Ohne Zugriff auf einen Symcon-Server aus dem Repository-Verzeichnis ausführen:
 ```sh
 php -l Bewohnerstatus/module.php
 php tests/module_test.php
+php tests/thumbnail_test.php
 RESIDENT_TEST_NO_LOCK_MESSAGE=1 php tests/module_test.php
 node tests/frontend_test.js
 git diff --check
@@ -36,3 +37,7 @@ Das Standardhintergrundbild bleibt unverändert. Die Übertragungsoptimierung er
 ## Gesamtes Bildbudget
 
 Der Test mit fünf großen Fotos plus Hintergrund prüft die Summe aller Base64-Bilder, den vollständigen HTML-Aufruf inklusive zusätzlicher JSON-RPC-Kodierung sowie Update-Nachrichten gegen das gemeldete Limit von 5.048.576 Byte. Besonders viele `/`-Zeichen simulieren ungünstiges JSON-Escaping. Größte Bilder werden bei Budgetüberschreitung ersetzt; nach Verkleinerung der Quelldatei werden sie automatisch wieder angezeigt. Die Originalmedien werden nicht verändert.
+
+## PHP-Verkleinerung
+
+`thumbnail_test.php` erzeugt PNG-Testbilder im Speicher und prüft mit echtem GD: 512-Pixel-Grenze, Seitenverhältnis, Transparenz, 128-KiB-Grenze, unveränderte Originale, keine Hochskalierung, Cache-Erneuerung und fünf Bewohnerfotos zusammen. Mit `php -d disable_functions=imagecreatefromstring,imagepng tests/module_test.php` wird der Pfad ohne verfügbare GD-Funktionen geprüft. `php -d disable_functions=imagewebp tests/thumbnail_test.php` prüft den PNG-Ausgabepfad. Hintergründe werden nicht verkleinert.
