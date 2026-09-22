@@ -77,9 +77,8 @@ f.send({ graustufen: 0, abwesenheitstransparenz: 0.25 });
 assert.equal(f.document.documentElement.style['--absent-grayscale'], '0%');
 assert.equal(f.document.documentElement.style['--absent-opacity'], '0.25');
 assert(raw.includes('grayscale(var(--absent-grayscale') && raw.includes('opacity: var(--absent-opacity'));
-// Seitenrand aus der Kachel-Adresse; senkrecht bleibt die Kachel bei 0.
-assert(raw.includes("px('marginside')"));
-assert(raw.includes('padding: 0 var(--sym-ms)'));
-assert(!/--sym-mt|--sym-mb|margintop|marginbottom/.test(raw));
+// Die Kachel setzt ihre Raender selbst und liest keine Systemwerte aus der Adresse.
+assert(!/--sym-|URLSearchParams|location\.search/.test(raw));
+assert(/\.container_anwesenheit\s*\{[^}]*padding:\s*0;/.test(raw));
 assert(!/DebugOutline|debug-outline/.test(raw));
-console.log('PASS: Frontend deltas, ordering, escaping, visibility, operation, ARIA state, absent styling, tile margins and malformed messages');
+console.log('PASS: Frontend deltas, ordering, escaping, visibility, operation, ARIA state, absent styling and malformed messages');

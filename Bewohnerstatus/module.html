@@ -10,13 +10,6 @@
             outline-offset: 2px;
         }
 
-        :root {
-            /* Von Symcon in der Kachel-Adresse uebergeben; 0 solange er fehlt.
-               Nur der Seitenrand wird uebernommen: die Kachel zentriert eine
-               einzelne Reihe, senkrecht stand hier immer 0. */
-            --sym-ms: 0px;
-        }
-
         html {
             background-color: var(--hintergrundfarbe);
             overflow: hidden;
@@ -56,8 +49,11 @@
             /* Icon in der Zelle zentrieren */
             align-items: start; 
             align-content: center;
-            padding: 0 var(--sym-ms);
-            box-sizing: border-box;
+            /* Die Kachel setzt ihre Raender selbst: die Systemwerte aus der
+               Adresse (margintop/marginside/marginbottom) wuerden hier doppelt
+               wirken, weil die Bewohnerreihe ohnehin zentriert ist und die
+               Bildbreite ueber ImageMaxWidth begrenzt wird. */
+            padding: 0;
         }
 
         .bewohner_div {
@@ -130,22 +126,6 @@
             opacity: var(--absent-opacity, 0.5);
         }
     </style>
-
-    <script>
-        /* Seitenrand aus der Kachel-Adresse uebernehmen, so frueh wie
-           moeglich — die Variable muss vor dem ersten Zeichnen stehen. */
-        (function systemRand() {
-            try {
-                const p = new URLSearchParams(window.location.search);
-                const px = (name) => {
-                    const v = parseInt(p.get(name), 10);
-                    return (Number.isFinite(v) && v >= 0) ? v + 'px' : null;
-                };
-                const ms = px('marginside');
-                if (ms !== null) { document.documentElement.style.setProperty('--sym-ms', ms); }
-            } catch (e) { /* ohne Adresszusatz gelten die Vorgaben (0) */ }
-        })();
-    </script>
 </head>
 
 <body>

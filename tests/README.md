@@ -17,7 +17,7 @@ Die PHP-Tests prüfen zusätzlich, dass Kachel und Konfigurationsformular genau 
 
 Die PHP-Tests verwenden isolierte SDK-Doubles. Sie prüfen Kernelstart, Hintergrundentfernung, vollständige Initialzustände trotz Bild-Deltas, WebP und Medienänderungen, Umschaltung mit und ohne Aktion, Schreibschutz, Bedienungssperre, ungültige Zuordnungen, UTF-8, Script-Escaping, Wertebegrenzung, Konfigurationshinweise und Bildgrößenlimit.
 
-Die JavaScript-Tests führen den tatsächlichen Nachrichtencode mit einem minimalen DOM-Double aus. Sie setzen die Bewohnervorlage aus `module.html` so oft ein, wie `RESIDENT_COUNT` in `module.php` vorgibt, und prüfen damit zugleich beide Dateien gegeneinander. Geprüft werden Reihenfolgeunabhängigkeit, vollständige und partielle Updates, Sichtbarkeit, Textausgabe, ARIA-Zustände, Graustufen und Deckkraft bei Abwesenheit, die Übernahme der Systemränder aus der Kachel-Adresse und fehlerhafte Nachrichten. Native Tastaturereignisse und CSS-Layout benötigen zusätzlich einen Browser.
+Die JavaScript-Tests führen den tatsächlichen Nachrichtencode mit einem minimalen DOM-Double aus. Sie setzen die Bewohnervorlage aus `module.html` so oft ein, wie `RESIDENT_COUNT` in `module.php` vorgibt, und prüfen damit zugleich beide Dateien gegeneinander. Geprüft werden Reihenfolgeunabhängigkeit, vollständige und partielle Updates, Sichtbarkeit, Textausgabe, ARIA-Zustände, Graustufen und Deckkraft bei Abwesenheit und fehlerhafte Nachrichten. Native Tastaturereignisse und CSS-Layout benötigen zusätzlich einen Browser.
 
 Vor einer Veröffentlichung in einer Symcon-Testinstanz prüfen:
 
