@@ -1,5 +1,5 @@
 # Bewohnerstatus
-![Bewohnerstatus-Kachel](https://github.com/da8ter/images/blob/main/bewohner_status.jpg)
+![Bewohnerstatus-Kachel](https://raw.githubusercontent.com/da8ter/images/refs/heads/main/bewohnerstatus.png)
 
 ### Inhaltsverzeichnis
 
