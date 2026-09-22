@@ -25,7 +25,7 @@
 
 ### 2. Voraussetzungen
 
-- Mindestversion: IP-Symcon 8.1. Die verwendete Basisklasse `IPSModuleStrict` gibt es laut [Handbuch](https://www.symcon.de/de/service/dokumentation/entwicklerbereich/sdk-tools/sdk-php/module/) erst seit 8.1; das Konfigurationsformular nutzt zudem `displayValue`/`suffix` am `HorizontalSlider`, ebenfalls ab 8.1.
+- Mindestversion: Symcon 8.1.
 
 ### 3. Software-Installation
 
@@ -92,10 +92,6 @@ Die maximale Bildbreite ist von 10 bis 100 Prozent einstellbar (Standard: 80 Pro
 * Die Hinweise auf der Konfigurationsseite (ungültige Variable, nicht unterstütztes Bild, überschrittenes Bildbudget) beziehen sich auf den **übernommenen** Stand. Nach dem Ändern eines Feldes erscheinen sie erst nach "Änderungen übernehmen".
 * Bewohnerfotos werden nur für die Kachel verkleinert (längste Kante 512 px, Ziel unter 128 KiB, WebP sofern verfügbar). Die Medienobjekte selbst bleiben unverändert. Ohne PHP-GD entfällt die Verkleinerung; die Konfigurationsseite weist darauf hin.
 * Die Kachel baut ihre Bewohnerplätze aus der Nachricht auf. Eine geöffnete Kachel folgt einer geänderten Liste sofort, ohne neu geladen zu werden.
-* Das Entfernungs-Kennzeichen bleibt innerhalb des Fotorahmens, weil die Kachel auf `overflow: hidden` steht; in der obersten Reihe wäre ein überstehendes Kennzeichen sonst abgeschnitten.
-* Das Symbol stammt aus der Font-Awesome-Ausgabe, die Symcon unter `/icons.js` ausliefert (`fa-light fa-route`). Steht sie nicht zur Verfügung, bleibt nur der Text — die Kachel funktioniert weiter.
 * Angetippt bleibt das Kennzeichen drei Sekunden offen und fährt dann von selbst wieder ein. Ein zweiter Tipp schließt es sofort. Der Tipp auf das Kennzeichen schaltet den Anwesenheitsstatus **nicht** um.
 * Der Text bleibt auch eingefahren im Dokument stehen, damit Vorlesewerkzeuge ihn finden.
 * **Übernahme alter Installationen:** Bis Version 1.1.0 gab es fünf feste Bewohner-Felder. Beim ersten Start nach dem Update wandert deren Inhalt automatisch in die Liste — Lücken werden geschlossen, Foto, Zusatzinfo und alternativer Name bleiben erhalten; die Entfernung bleibt leer, die gab es vorher nicht. Die alten Felder werden danach geleert, die Übernahme läuft genau einmal und wird im Meldungslog vermerkt. Wer die Liste anschließend leert, bekommt die alten Bewohner nicht zurück.
-
-Entwicklung und Prüfschritte: [Regressionstests](../tests/README.md).
