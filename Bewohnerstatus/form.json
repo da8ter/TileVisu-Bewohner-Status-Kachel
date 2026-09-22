@@ -7,15 +7,19 @@
         },
         {
             "type": "Label",
-            "caption": "The Resident Status Tile graphically represents the presence status of up to 5 residents."
+            "caption": "The Resident Status Tile graphically represents the presence status of any number of residents."
         },
         {
             "type": "Label",
-            "caption": "Residents are configured in the list below; as many as you like. (Optional) Photos must be created as media objects. Photos should have an aspect ratio of 1:1. If a resident is absent, the photo will be displayed in grayscale. Present residents in color."
+            "caption": "Residents are configured in the list below — add, remove and reorder rows as you like. The order of the list is the order in the tile. (Optional) Photos must be created as media objects and should have an aspect ratio of 1:1. Absent residents are shown in grayscale and reduced opacity; both can be adjusted under Options."
         },
         {
             "type": "Label",
             "caption": "A Bool variable is needed for each resident. (true = present, false = absent)"
+        },
+        {
+            "type": "Label",
+            "caption": "The distance is optional and appears as a small badge on the photo: it stays hidden while the resident is at home and slides out on mouse-over or tap."
         },
         {
             "type": "Label",

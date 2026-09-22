@@ -537,7 +537,9 @@ class TileVisuresidencystatustile extends IPSModuleStrict
             }
             $data[$key] = $replacement;
             $total -= $size - strlen($replacement);
-            $limited[] = $key === 'bgimage' ? 'bgImage' : 'Bewohner' . $this->ResidentSlot($key, 'image') . 'Image';
+            $limited[] = $key === 'bgimage'
+                ? $this->Translate('Background image')
+                : sprintf('%s %d', 'Bewohner', $this->ResidentSlot($key, 'image'));
         }
         return $limited;
     }
@@ -617,7 +619,7 @@ class TileVisuresidencystatustile extends IPSModuleStrict
             $warnings[] = $this->Translate('PHP GD is unavailable. Resident photos cannot be resized automatically.');
         }
         $label = static fn (int $slot): string => sprintf('%s %d', 'Bewohner', $slot);
-        $imageProperties = ['bgImage' => $this->ReadPropertyInteger('bgImage')];
+        $imageProperties = [];
         foreach ($this->Residents() as $index => $resident) {
             $slot = $index + 1;
             if ($resident['Variable'] !== 0 && !$this->IsResidentVariable($resident['Variable'])) {
@@ -631,7 +633,7 @@ class TileVisuresidencystatustile extends IPSModuleStrict
             $imageProperties[$label($slot)] = $resident['Image'];
         }
         foreach ($imageProperties as $property => $id) {
-            if ($id === 0 || ($property === 'bgImage' && $this->ReadPropertyBoolean('BG_Off'))) {
+            if ($id === 0) {
                 continue;
             }
             $media = IPS_MediaExists($id) ? IPS_GetMedia($id) : null;

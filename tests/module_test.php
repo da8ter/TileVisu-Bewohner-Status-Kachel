@@ -124,6 +124,14 @@ $lists = [];
 array_walk_recursive($form, static function ($value, $key) use (&$lists) { if ($key === 'type' && $value === 'List') $lists[] = $value; });
 check($lists === ['List'], 'Configuration offers exactly one resident list');
 check(!str_contains($list->GetConfigurationForm(), '"repeat"') && !str_contains($list->GetConfigurationForm(), '{i}'), 'No template leftovers in the form');
+// Interne Property-Namen gehoeren nicht in Texte fuer Anwender.
+$large->properties['BG_Off'] = false; $large->properties['bgImage'] = 99999;
+foreach ([$m, $list, $large] as $instanz) {
+    foreach (['bgImage', 'AdditionalInfo1', 'Bewohner1AltName', 'Residents'] as $intern) {
+        check(!str_contains(json_decode($instanz->GetConfigurationForm(), true)['elements'][0]['caption'] ?? '', $intern),
+            'No property name "' . $intern . '" leaks into the hints');
+    }
+}
 
 // --- Entfernung am Foto ---------------------------------------------------
 $dist = register(new TileVisuresidencystatustile()); $dist->InstanceID = 12351; register($dist);
