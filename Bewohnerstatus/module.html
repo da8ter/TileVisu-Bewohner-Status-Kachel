@@ -5,13 +5,16 @@
 <head>
 
     <style>
-        .debug-outline *, .debug-outline *::before, .debug-outline *::after {
-            outline: 1px solid red;
-        }
-        .debug-outline .container_anwesenheit { outline-color: yellow; }
         .image-wrapper:focus-visible {
             outline: 3px solid currentColor;
             outline-offset: 2px;
+        }
+
+        :root {
+            /* Von Symcon in der Kachel-Adresse uebergeben; 0 solange sie fehlen. */
+            --sym-mt: 0px;
+            --sym-ms: 0px;
+            --sym-mb: 0px;
         }
 
         html {
@@ -53,8 +56,8 @@
             /* Icon in der Zelle zentrieren */
             align-items: start; 
             align-content: center;
-            padding-top: 0px;
-            padding-bottom: 0px;
+            padding: var(--sym-mt) var(--sym-ms) var(--sym-mb) var(--sym-ms);
+            box-sizing: border-box;
         }
 
         .bewohner_div {
@@ -123,10 +126,28 @@
         }
 
         .grey {
-            filter: grayscale(100%);
-            opacity: 0.5;
+            filter: grayscale(var(--absent-grayscale, 100%));
+            opacity: var(--absent-opacity, 0.5);
         }
     </style>
+
+    <script>
+        /* Systemraender aus der Kachel-Adresse uebernehmen, so frueh wie
+           moeglich — die Variablen muessen vor dem ersten Zeichnen stehen. */
+        (function systemRaender() {
+            try {
+                const p = new URLSearchParams(window.location.search);
+                const px = (name) => {
+                    const v = parseInt(p.get(name), 10);
+                    return (Number.isFinite(v) && v >= 0) ? v + 'px' : null;
+                };
+                const wurzel = document.documentElement.style;
+                const mt = px('margintop');    if (mt !== null) { wurzel.setProperty('--sym-mt', mt); }
+                const ms = px('marginside');   if (ms !== null) { wurzel.setProperty('--sym-ms', ms); }
+                const mb = px('marginbottom'); if (mb !== null) { wurzel.setProperty('--sym-mb', mb); }
+            } catch (e) { /* ohne Adresszusatz gelten die Vorgaben (0) */ }
+        })();
+    </script>
 </head>
 
 <body>
@@ -148,6 +169,8 @@
                 eckenradius: ['--corner-radius', '%'],
                 imageMaxWidth: ['--image-max-width', '%'],
                 bildtransparenz: ['--bildtransparenz', ''],
+                graustufen: ['--absent-grayscale', '%'],
+                abwesenheitstransparenz: ['--absent-opacity', ''],
                 kachelhintergrundfarbe: ['--hintergrundfarbe', '']
             };
             for (const [key, [property, unit]] of Object.entries(variables)) {
@@ -156,8 +179,9 @@
             if (Object.prototype.hasOwnProperty.call(update, 'bgimage')) {
                 document.body.style.setProperty('--background-image', update.bgimage ? 'url(' + update.bgimage + ')' : 'none');
             }
-            if (Object.prototype.hasOwnProperty.call(update, 'DebugOutline')) root.classList.toggle('debug-outline', !!update.DebugOutline);
-            for (let i = 1; i <= 5; i++) {
+            // Die Bewohnerzahl steht allein im Modul (RESIDENT_COUNT); hier wird
+            // gezaehlt, solange die Vorlage einen weiteren Block geliefert hat.
+            for (let i = 1; document.getElementById('Bewohner' + i); i++) {
                 const resident = document.getElementById('Bewohner' + i);
                 const name = document.getElementById('name' + i);
                 const info = document.getElementById('info' + i);
@@ -190,45 +214,15 @@
 
 
     <div class="container_anwesenheit" id="container">
-        <div class="bewohner_div hidden" id="Bewohner1">
-            <button type="button" class="image-wrapper" id="button1" disabled aria-pressed="false" aria-describedby="info1" onclick="requestAction('Bewohner1', 1);">
-                <img class="color" id="image1" alt="">
+<!--BEWOHNER-->
+        <div class="bewohner_div hidden" id="Bewohner{i}">
+            <button type="button" class="image-wrapper" id="button{i}" disabled aria-pressed="false" aria-describedby="info{i}" onclick="requestAction('Bewohner{i}', 1);">
+                <img class="color" id="image{i}" alt="">
             </button>
-            <div class="name hidden" id="name1"></div>
-            <div class="info hidden" id="info1"></div>
+            <div class="name hidden" id="name{i}"></div>
+            <div class="info hidden" id="info{i}"></div>
         </div>
-
-        <div class="bewohner_div hidden" id="Bewohner2">
-            <button type="button" class="image-wrapper" id="button2" disabled aria-pressed="false" aria-describedby="info2" onclick="requestAction('Bewohner2', 1);">
-                <img class="color" id="image2" alt="">
-            </button>
-            <div class="name hidden" id="name2"></div>
-            <div class="info hidden" id="info2"></div>
-        </div>
-
-        <div class="bewohner_div hidden" id="Bewohner3">
-            <button type="button" class="image-wrapper" id="button3" disabled aria-pressed="false" aria-describedby="info3" onclick="requestAction('Bewohner3', 1);">
-                <img class="color" id="image3" alt="">
-            </button>
-            <div class="name hidden" id="name3"></div>
-            <div class="info hidden" id="info3"></div>
-        </div>
-
-        <div class="bewohner_div hidden" id="Bewohner4">
-            <button type="button" class="image-wrapper" id="button4" disabled aria-pressed="false" aria-describedby="info4" onclick="requestAction('Bewohner4', 1);">
-                <img class="color" id="image4" alt="">
-            </button>
-            <div class="name hidden" id="name4"></div>
-            <div class="info hidden" id="info4"></div>
-        </div>
-
-        <div class="bewohner_div hidden" id="Bewohner5">
-            <button type="button" class="image-wrapper" id="button5" disabled aria-pressed="false" aria-describedby="info5" onclick="requestAction('Bewohner5', 1);">
-                <img class="color" id="image5" alt="">
-            </button>
-            <div class="name hidden" id="name5"></div>
-            <div class="info hidden" id="info5"></div>
-        </div>
+    <!--/BEWOHNER-->
     </div>
 
 </body>

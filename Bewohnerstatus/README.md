@@ -18,12 +18,13 @@
 * Die Schriftgröße für den Bewohnernamen und die Zusatzinfo ist individuell einstellbar (Pixel).
 * Der Eckenradius der Bilder ist einstellbar (z.B. 50% für runde Bilder).
 * Bewohnernamen können global ein- oder ausgeblendet werden.
+* Die Darstellung abwesender Bewohner ist einstellbar: Graustufen lassen sich abschalten, die Deckkraft der Fotos ist per Schieberegler von 0 bis 100 % wählbar.
 * Die Bedienung (Statusumschaltung per Klick auf das Bild) kann global gesperrt werden.
 * Ein benutzerdefiniertes Hintergrundbild mit einstellbarer Transparenz und Kachelhintergrundfarbe kann verwendet werden. Alternativ kann ein Standard-Hintergrundbild genutzt oder ganz deaktiviert werden.
 
 ### 2. Voraussetzungen
 
-- Deklarierte Mindestversion: IP-Symcon 7.1. Die verwendete Basisklasse `IPSModuleStrict` wurde dort als Preview angeboten; reguläre Unterstützung besteht ab 8.1. Ein Laufzeittest auf 7.1 steht aus.
+- Mindestversion: IP-Symcon 8.1. Die verwendete Basisklasse `IPSModuleStrict` gibt es laut [Handbuch](https://www.symcon.de/de/service/dokumentation/entwicklerbereich/sdk-tools/sdk-php/module/) erst seit 8.1; das Konfigurationsformular nutzt zudem `displayValue`/`suffix` am `HorizontalSlider`, ebenfalls ab 8.1.
 
 ### 3. Software-Installation
 
@@ -47,6 +48,8 @@ Transparenz Bild           | Transparenz des Hintergrundbildes (Wert von 0.0 bis
 Kachelhintergrundfarbe     | Hintergrundfarbe der Kachel. Nur sichtbar, wenn ein Hintergrundbild mit Transparenz < 1.0 verwendet wird.
 Name anzeigen              | Schaltet die Anzeige der Bewohnernamen global ein (`true`) oder aus (`false`).
 Bedienung sperren          | Sperrt (`true`) oder erlaubt (`false`) die manuelle Statusumschaltung durch Klick auf das Bewohnerbild.
+Graustufen bei Abwesenheit | Stellt abwesende Bewohner in Graustufen dar (`true`, Standard) oder belässt das Foto farbig (`false`).
+Deckkraft der Fotos bei Abwesenheit | Deckkraft abwesender Bewohnerfotos in Prozent (Schieberegler 0 bis 100, Standard: `50`). `0` blendet das Foto ganz aus, `100` zeigt es unverändert.
 Schriftgröße Name          | Schriftgröße des Bewohnernamens (Standard: `10`). Angabe in px.
 Schriftgröße Zusatzinfo    | Schriftgröße der Zusatzinformationen (Standard: `8`). Angabe in px.
 Eckenradius Bilder         | Eckenradius für die Bewohnerbilder (z.B. `0` für eckig, `50` für rund). Angabe in Prozent.
@@ -79,5 +82,11 @@ Die maximale Bildbreite ist von 10 bis 100 Prozent einstellbar (Standard: 80 Pro
 ### 7. PHP-Befehlsreferenz
 
 `IPS_RequestAction($InstanzID, 'Bewohner1', 1)` schaltet den konfigurierten Bewohnerstatus um. Entsprechend stehen `Bewohner2` bis `Bewohner5` zur Verfügung. Der Wertparameter bleibt aus Kompatibilitätsgründen ohne Bedeutung: Der aktuelle Status wird invertiert. Die Bedienungssperre gilt auch für diesen Aufruf.
+
+### 8. Hinweise
+
+* Die Hinweise auf der Konfigurationsseite (ungültige Variable, nicht unterstütztes Bild, überschrittenes Bildbudget) beziehen sich auf den **übernommenen** Stand. Nach dem Ändern eines Feldes erscheinen sie erst nach "Änderungen übernehmen".
+* Bewohnerfotos werden nur für die Kachel verkleinert (längste Kante 512 px, Ziel unter 128 KiB, WebP sofern verfügbar). Die Medienobjekte selbst bleiben unverändert. Ohne PHP-GD entfällt die Verkleinerung; die Konfigurationsseite weist darauf hin.
+* Die Zahl der Bewohner steht allein in der Konstanten `RESIDENT_COUNT`; Kachel und Konfigurationsformular werden daraus erzeugt.
 
 Entwicklung und Prüfschritte: [Regressionstests](../tests/README.md).

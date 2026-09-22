@@ -34,6 +34,8 @@
             "Maximum image width in %": "Maximale Bildbreite in %",
             "Display name": "Name anzeigen",
             "Lock operation": "Bedienung sperren",
+            "Grayscale photos when absent": "Graustufen bei Abwesenheit",
+            "Photo opacity when absent": "Deckkraft der Fotos bei Abwesenheit",
             "Donations / Gifts": "Spenden / Schenkungen",
             "Say thank you and support the developer of this module:": "Sag Danke und unterstütze den Entwickler dieses Moduls:",
             "Select an existing Boolean variable.": "Bitte eine vorhandene Boolean-Variable auswählen.",

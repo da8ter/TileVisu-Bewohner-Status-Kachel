@@ -48,7 +48,8 @@ $variables[20]['value'] = "\xB1"; $m->ApplyChanges();
 check(latest($m)['info1'] === "\u{FFFD}", 'Invalid UTF-8 repaired in full state');
 $m->MessageSink(0,20,VM_UPDATE,[]); check(latest($m)['info1'] === "\u{FFFD}", 'Invalid UTF-8 repaired in delta');
 $m->properties['Bewohner1AltName'] = '</script><script>alert(1)</script>';
-check(substr_count($m->GetVisualizationTile(), '<script>') === 2, 'Initial script cannot be escaped by a name');
+$baseScripts = substr_count(file_get_contents(__DIR__ . '/../Bewohnerstatus/module.html'), '<script>');
+check(substr_count($m->GetVisualizationTile(), '<script>') === $baseScripts + 1, 'Initial script cannot be escaped by a name');
 $m->properties['Bewohner2'] = 20; $m->properties['Schriftgroesse'] = INF; $m->properties['ImageMaxWidth'] = 500;
 $m->ApplyChanges(); check(!latest($m)['Bewohner2'] && latest($m)['Bewohner1'], 'Invalid resident does not break other residents');
 check(latest($m)['fontsize'] === 10 && latest($m)['imageMaxWidth'] === 100, 'Numeric configuration is bounded');
@@ -90,4 +91,34 @@ $large->ApplyChanges(); check(!isset(latest($large)['image1']), 'Budgeted images
 $media[201]['content'] = base64_encode('small replacement');
 $large->MessageSink(0,201,MM_UPDATE,[]);
 check(latest($large)['image1'] === 'data:image/jpeg;base64,' . base64_encode('small replacement'), 'Reducing an image restores it automatically');
+
+// --- Bewohnerzahl, Vorlage und Darstellung bei Abwesenheit -----------------
+$reflection = new ReflectionClass(TileVisuresidencystatustile::class);
+$count = $reflection->getConstant('RESIDENT_COUNT');
+$tile = $m->GetVisualizationTile();
+check(substr_count($tile, '<button type="button"') === $count, 'Tile renders exactly RESIDENT_COUNT residents');
+check(!str_contains($tile, '{i}') && !str_contains($tile, '<!--BEWOHNER-->'), 'Resident template markers are consumed');
+check(str_contains($tile, 'id="Bewohner' . $count . '"') && !str_contains($tile, 'id="Bewohner' . ($count + 1) . '"'),
+    'Slot numbering follows RESIDENT_COUNT');
+foreach ([(string)($count + 1), '0', '01', '', ' 1'] as $suffix) {
+    try { $m->RequestAction('Bewohner' . $suffix, 1); throw new LogicException('Ident accepted: ' . $suffix); }
+    catch (Exception $e) { check(str_starts_with($e->getMessage(), 'Invalid ident:'), 'Ident out of range rejected: "Bewohner' . $suffix . '"'); }
+}
+$form = json_decode($m->GetConfigurationForm(), true, 512, JSON_THROW_ON_ERROR);
+$names = [];
+array_walk_recursive($form, static function ($value, $key) use (&$names) { if ($key === 'name') $names[] = $value; });
+for ($i = 1; $i <= $count; $i++) {
+    check(in_array('Bewohner' . $i, $names, true) && in_array('Bewohner' . $i . 'AltName', $names, true), 'Configuration row exists for resident ' . $i);
+}
+check(!in_array('Bewohner' . ($count + 1), $names, true), 'Configuration stops at RESIDENT_COUNT');
+check(!str_contains($m->GetConfigurationForm(), '{i}') && !str_contains($m->GetConfigurationForm(), '"repeat"'), 'Form template markers are consumed');
+check(!array_key_exists('DebugOutline', snapshot($m)), 'Debug outline is gone from the payload');
+$m->properties['GraustufenSwitch'] = true; $m->properties['Abwesenheitstransparenz'] = 50; $m->ApplyChanges();
+check(latest($m)['graustufen'] === 100 && (float) latest($m)['abwesenheitstransparenz'] === 0.5, 'Absent styling defaults to grayscale at half opacity');
+$m->properties['GraustufenSwitch'] = false; $m->properties['Abwesenheitstransparenz'] = 20; $m->ApplyChanges();
+check(latest($m)['graustufen'] === 0 && (float) latest($m)['abwesenheitstransparenz'] === 0.2, 'Absent styling follows the configuration');
+$m->properties['Abwesenheitstransparenz'] = 500; $m->ApplyChanges();
+// json_encode macht aus 1.0 ein int; hier zaehlt der Wert, nicht der PHP-Typ.
+check((float) latest($m)['abwesenheitstransparenz'] === 1.0, 'Absent opacity is bounded');
+
 echo 'Worst-case image fixture transport: ' . $transportSize . ' bytes' . PHP_EOL;

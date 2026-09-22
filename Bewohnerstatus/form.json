@@ -68,15 +68,16 @@
         },
         {
             "type": "Label",
-            "caption": "Resident 1",
-            "bold": true
+            "caption": "Resident {i}",
+            "bold": true,
+            "repeat": "resident"
         },
         {
             "type": "RowLayout",
             "items": [
                 {
                     "type": "SelectVariable",
-                    "name": "Bewohner1",
+                    "name": "Bewohner{i}",
                     "caption": "Status",
                     "validVariableTypes": [
                         0
@@ -84,152 +85,21 @@
                 },
                 {
                     "type": "SelectVariable",
-                    "name": "AdditionalInfo1",
+                    "name": "AdditionalInfo{i}",
                     "caption": "Additional Info"
                 },
                 {
                     "type": "SelectMedia",
-                    "name": "Bewohner1Image",
+                    "name": "Bewohner{i}Image",
                     "caption": "Photo"
                 },
                 {
                     "type": "ValidationTextBox",
-                    "name": "Bewohner1AltName",
+                    "name": "Bewohner{i}AltName",
                     "caption": "Overwrite variable name:"
                 }
-            ]
-        },
-        {
-            "type": "Label",
-            "caption": "Resident 2",
-            "bold": true
-        },
-        {
-            "type": "RowLayout",
-            "items": [
-                {
-                    "type": "SelectVariable",
-                    "name": "Bewohner2",
-                    "caption": "Status",
-                    "validVariableTypes": [
-                        0
-                    ]
-                },
-                {
-                    "type": "SelectVariable",
-                    "name": "AdditionalInfo2",
-                    "caption": "Additional Info"
-                },
-                {
-                    "type": "SelectMedia",
-                    "name": "Bewohner2Image",
-                    "caption": "Photo"
-                },
-                {
-                    "type": "ValidationTextBox",
-                    "name": "Bewohner2AltName",
-                    "caption": "Overwrite variable name:"
-                }
-            ]
-        },
-        {
-            "type": "Label",
-            "caption": "Resident 3",
-            "bold": true
-        },
-        {
-            "type": "RowLayout",
-            "items": [
-                {
-                    "type": "SelectVariable",
-                    "name": "Bewohner3",
-                    "caption": "Status",
-                    "validVariableTypes": [
-                        0
-                    ]
-                },
-                {
-                    "type": "SelectVariable",
-                    "name": "AdditionalInfo3",
-                    "caption": "Additional Info"
-                },
-                {
-                    "type": "SelectMedia",
-                    "name": "Bewohner3Image",
-                    "caption": "Photo"
-                },
-                {
-                    "type": "ValidationTextBox",
-                    "name": "Bewohner3AltName",
-                    "caption": "Overwrite variable name:"
-                }
-            ]
-        },
-        {
-            "type": "Label",
-            "caption": "Resident 4",
-            "bold": true
-        },
-        {
-            "type": "RowLayout",
-            "items": [
-                {
-                    "type": "SelectVariable",
-                    "name": "Bewohner4",
-                    "caption": "Status",
-                    "validVariableTypes": [
-                        0
-                    ]
-                },
-                {
-                    "type": "SelectVariable",
-                    "name": "AdditionalInfo4",
-                    "caption": "Additional Info"
-                },
-                {
-                    "type": "SelectMedia",
-                    "name": "Bewohner4Image",
-                    "caption": "Photo"
-                },
-                {
-                    "type": "ValidationTextBox",
-                    "name": "Bewohner4AltName",
-                    "caption": "Overwrite variable name:"
-                }
-            ]
-        },
-        {
-            "type": "Label",
-            "caption": "Resident 5",
-            "bold": true
-        },
-        {
-            "type": "RowLayout",
-            "items": [
-                {
-                    "type": "SelectVariable",
-                    "name": "Bewohner5",
-                    "caption": "Status",
-                    "validVariableTypes": [
-                        0
-                    ]
-                },
-                {
-                    "type": "SelectVariable",
-                    "name": "AdditionalInfo5",
-                    "caption": "Additional Info"
-                },
-                {
-                    "type": "SelectMedia",
-                    "name": "Bewohner5Image",
-                    "caption": "Photo"
-                },
-                {
-                    "type": "ValidationTextBox",
-                    "name": "Bewohner5AltName",
-                    "caption": "Overwrite variable name:"
-                }
-            ]
+            ],
+            "repeat": "resident"
         },
         {
             "type": "Label",
@@ -289,6 +159,26 @@
                     "type": "CheckBox",
                     "name": "BedienungSwitch",
                     "caption": "Lock operation"
+                }
+            ]
+        },
+        {
+            "type": "RowLayout",
+            "items": [
+                {
+                    "type": "CheckBox",
+                    "name": "GraustufenSwitch",
+                    "caption": "Grayscale photos when absent"
+                },
+                {
+                    "type": "HorizontalSlider",
+                    "name": "Abwesenheitstransparenz",
+                    "caption": "Photo opacity when absent",
+                    "minimum": 0,
+                    "maximum": 100,
+                    "stepSize": 5,
+                    "suffix": " %",
+                    "displayValue": true
                 }
             ]
         },

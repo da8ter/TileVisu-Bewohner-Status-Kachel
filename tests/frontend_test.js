@@ -3,8 +3,16 @@ const fs = require('node:fs');
 const path = require('node:path');
 const vm = require('node:vm');
 const assert = require('node:assert/strict');
-const html = fs.readFileSync(path.join(__dirname, '../Bewohnerstatus/module.html'), 'utf8');
-const script = html.match(/<script>([\s\S]*?)<\/script>/)[1];
+const raw = fs.readFileSync(path.join(__dirname, '../Bewohnerstatus/module.html'), 'utf8');
+const php = fs.readFileSync(path.join(__dirname, '../Bewohnerstatus/module.php'), 'utf8');
+// Die Bewohnerzahl steht allein in RESIDENT_COUNT; die Kachel traegt nur die Vorlage.
+const count = Number(php.match(/RESIDENT_COUNT\s*=\s*(\d+)/)[1]);
+const template = raw.match(/<!--BEWOHNER-->([\s\S]*?)<!--\/BEWOHNER-->/)[1];
+const html = raw.replace(/<!--BEWOHNER-->[\s\S]*?<!--\/BEWOHNER-->/,
+    Array.from({ length: count }, (_, n) => template.replaceAll('{i}', String(n + 1))).join(''));
+const script = html.match(/<script>[\s\S]*?<\/script>/g)
+    .map(block => block.slice('<script>'.length, -'</script>'.length))
+    .find(block => block.includes('function handleMessage'));
 class Element {
     constructor(classes = '') {
         this.classes = new Set(classes.split(' ').filter(Boolean));
@@ -17,7 +25,7 @@ class Element {
 }
 function fixture() {
     const elements = {};
-    for (let i = 1; i <= 5; i++) {
+    for (let i = 1; i <= count; i++) {
         for (const prefix of ['Bewohner', 'image', 'button', 'name', 'info']) {
             const tag = html.match(new RegExp('<[^>]+id="' + prefix + i + '"[^>]*>'))[0];
             elements[prefix + i] = new Element(tag.match(/class="([^"]+)"/)?.[1]);
@@ -39,14 +47,13 @@ assert(!f.elements.info1.classes.has('hidden'));
 f.send({ nameswitch: true });
 assert.equal(f.document.documentElement.style['--name-font-size'], '21px');
 assert(!f.elements.name1.classes.has('hidden'));
-f.send({ bgimage: '', info1: '', value1: false, operable1: false, DebugOutline: true });
+f.send({ bgimage: '', info1: '', value1: false, operable1: false });
 assert.equal(f.document.body.style['--background-image'], 'none');
 assert(f.elements.info1.classes.has('info') && f.elements.info1.classes.has('hidden'));
 assert(f.elements.image1.classes.has('grey') && !f.elements.image1.classes.has('color'));
 assert.equal(f.elements.button1.attributes['aria-pressed'], 'false');
 assert.equal(f.elements.button1.disabled, true);
-f.send({ DebugOutline: false, image1: 'data:image/webp;base64,AAAA' });
-assert(!f.document.documentElement.classes.has('debug-outline'));
+f.send({ image1: 'data:image/webp;base64,AAAA' });
 f.send({ value1: true });
 assert.equal(f.elements.image1.src, 'data:image/webp;base64,AAAA');
 f.send({ image1: '', Bewohner1: false });
@@ -59,7 +66,19 @@ left.send(message); right.send(Object.fromEntries(Object.entries(message).revers
 const state = f => JSON.stringify(Object.entries(f.elements).map(([id,e]) => [id, [...e.classes].sort(), e.attributes, e.disabled, e.textContent, e.src]));
 assert.equal(state(left), state(right));
 assert.equal(left.document.documentElement.style['--name-font-size'], right.document.documentElement.style['--name-font-size']);
-assert.equal((html.match(/<button type="button"/g) || []).length, 5);
-assert.equal((html.match(/<img[^>]*alt=""/g) || []).length, 5);
+assert.equal((html.match(/<button type="button"/g) || []).length, count);
+assert.equal((html.match(/<img[^>]*alt=""/g) || []).length, count);
+assert.equal((raw.match(/<button type="button"/g) || []).length, 1);
 assert(html.includes('.image-wrapper:focus-visible'));
-console.log('PASS: Frontend deltas, ordering, escaping, visibility, operation, ARIA state and malformed messages');
+// Ein Bewohner ueber der konfigurierten Zahl darf die Nachricht nicht sprengen.
+assert.doesNotThrow(() => f.send({ ['Bewohner' + (count + 1)]: true, ['value' + (count + 1)]: true }));
+// Graustufen und Deckkraft bei Abwesenheit kommen aus der Konfiguration.
+f.send({ graustufen: 0, abwesenheitstransparenz: 0.25 });
+assert.equal(f.document.documentElement.style['--absent-grayscale'], '0%');
+assert.equal(f.document.documentElement.style['--absent-opacity'], '0.25');
+assert(raw.includes('grayscale(var(--absent-grayscale') && raw.includes('opacity: var(--absent-opacity'));
+// Systemraender aus der Kachel-Adresse.
+for (const name of ['margintop', 'marginside', 'marginbottom']) assert(raw.includes("px('" + name + "')"));
+assert(raw.includes('var(--sym-mt) var(--sym-ms) var(--sym-mb) var(--sym-ms)'));
+assert(!/DebugOutline|debug-outline/.test(raw));
+console.log('PASS: Frontend deltas, ordering, escaping, visibility, operation, ARIA state, absent styling, tile margins and malformed messages');
