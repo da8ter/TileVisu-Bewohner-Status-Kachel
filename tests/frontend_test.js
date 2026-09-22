@@ -154,6 +154,10 @@ assert.equal(declarations.get('background'), 'var(--accent-color, #00cdab)');
 // Das Kennzeichen muss Tipp und Zeiger annehmen koennen.
 assert.notEqual(declarations.get('pointer-events'), 'none');
 assert.equal(declarations.get('cursor'), 'pointer');
+// Eingeklappt rund: Hoehe und Mindestbreite muessen gleich sein.
+assert.equal(declarations.get('height'), declarations.get('min-width'));
+assert.equal(declarations.get('box-sizing'), 'border-box');
+assert.equal(declarations.get('border-radius'), '999px');
 assert(raw.includes('.photo {') && /\.badge\s*\{[^}]*position:\s*absolute/.test(raw));
 // Das Kennzeichen darf den Fotorahmen nicht verlassen; html schneidet ab.
 assert(!/\.badge\s*\{[^}]*transform:/.test(raw));

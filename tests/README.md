@@ -13,7 +13,7 @@ git diff --check
 
 Der zweite PHP-Lauf lässt `VM_CHANGEDLOCKED` absichtlich undefiniert und prüft damit Instanzerstellung, Kernelstart und Nachrichtenverarbeitung auch ohne diese optionale SDK-Konstante.
 
-Die PHP-Tests prüfen zusätzlich die Bewohnerliste (zwölf Zeilen, Kürzen, leere und kaputte Listendaten, Idents außerhalb der Liste), die Übernahme alter Installationen (Lücken schließen, Felder leeren, genau ein Durchlauf, Neuinstallation, bereits gepflegte Liste, absichtlich geleerte Liste), die Entfernungs-Variable (eigenes Delta, Abo, fehlende und gelöschte Variable, Ausblenden bei Anwesenheit in beide Richtungen) und die Darstellung abwesender Bewohner.
+Die PHP-Tests prüfen zusätzlich die Bewohnerliste (zwölf Zeilen, Kürzen, leere und kaputte Listendaten, Idents außerhalb der Liste), die Übernahme alter Installationen (Lücken schließen, Felder leeren, genau ein Durchlauf, Neuinstallation, bereits gepflegte Liste, absichtlich geleerte Liste), die Entfernungs-Variable (eigenes Delta, Abo, fehlende und gelöschte Variable, Ausblenden bei Anwesenheit in beide Richtungen), die Anzeigereihenfolge (folgt der Liste, auch nach Umsortieren, auch für die Idents) und die Darstellung abwesender Bewohner.
 
 Die PHP-Tests verwenden isolierte SDK-Doubles. Sie prüfen Kernelstart, Hintergrundentfernung, vollständige Initialzustände trotz Bild-Deltas, WebP und Medienänderungen, Umschaltung mit und ohne Aktion, Schreibschutz, Bedienungssperre, ungültige Zuordnungen, UTF-8, Script-Escaping, Wertebegrenzung, Konfigurationshinweise und Bildgrößenlimit.
 

@@ -164,6 +164,27 @@ check(latest($dist) === ['distance1' => ''], 'A distance update stays hidden whi
 $variables[500]['value'] = false; $dist->ApplyChanges();
 check(latest($dist)['distance1'] === '7 km', 'The updated distance appears after leaving');
 
+// --- Reihenfolge folgt der Liste ------------------------------------------
+$ord = new TileVisuresidencystatustile(); $ord->InstanceID = 12352; register($ord); $ord->Create();
+resident(600, false); resident(601, false); resident(602, false);
+$variables[600]['name'] = 'Erster'; $variables[601]['name'] = 'Zweiter'; $variables[602]['name'] = 'Dritter';
+$namen = static function (TileVisuresidencystatustile $module): array {
+    $state = latest($module); $liste = [];
+    for ($i = 1; $i <= $state['residents']; $i++) { $liste[] = $state['name' . $i]; }
+    return $liste;
+};
+$ord->properties['Residents'] = residents(['Variable' => 600], ['Variable' => 601], ['Variable' => 602]);
+$ord->ApplyChanges();
+check($namen($ord) === ['Erster', 'Zweiter', 'Dritter'], 'Residents follow the list order');
+$ord->properties['Residents'] = residents(['Variable' => 602], ['Variable' => 600], ['Variable' => 601]);
+$ord->ApplyChanges();
+check($namen($ord) === ['Dritter', 'Erster', 'Zweiter'], 'Reordering the list reorders the tile');
+$ord->RequestAction('Bewohner1', 1);
+check(end($writes) === [602, true], 'Idents follow the new order too');
+$ord->properties['Residents'] = residents(['Variable' => 601], ['Variable' => 602], ['Variable' => 600], ['Variable' => 601]);
+$ord->ApplyChanges();
+check($namen($ord) === ['Zweiter', 'Dritter', 'Erster', 'Zweiter'], 'The same variable may appear twice, in both places');
+
 // --- Übernahme alter Installationen ---------------------------------------
 $old = new TileVisuresidencystatustile(); $old->InstanceID = 12348; register($old); $old->Create();
 resident(401); resident(402); resident(403, 'Arbeit');
