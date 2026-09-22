@@ -97,6 +97,7 @@ function GetValueBoolean(int $id): bool {
     if (IPS_GetVariable($id)['VariableType'] !== 0) throw new RuntimeException('Not Boolean');
     return $GLOBALS['variables'][$id]['value'];
 }
+function GetValue(int $id): mixed { return $GLOBALS['variables'][$id]['value']; }
 function GetValueFormatted(int $id): string { return (string)$GLOBALS['variables'][$id]['value']; }
 function HasAction(int $id): bool {
     $v = IPS_GetVariable($id);

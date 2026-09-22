@@ -43,7 +43,7 @@ $m->RequestAction('Bewohner1', 1); check(count($writes) === 1 && !snapshot($m)['
 try { $m->RequestAction("Bewohner1\n", 1); throw new LogicException('Ident accepted'); }
 catch (Exception $e) { check(str_starts_with($e->getMessage(),'Invalid ident:'), 'Trailing newline ident rejected'); }
 $m->properties['BedienungSwitch'] = false; $variables[10]['value'] = true;
-$m->MessageSink(0,10,VM_UPDATE,[]); check(latest($m) === ['value1'=>true], 'Status delta has no image payload');
+$m->MessageSink(0,10,VM_UPDATE,[]); check(latest($m) === ['value1'=>true, 'distance1'=>''], 'Status delta carries no image payload');
 $variables[20]['value'] = "\xB1"; $m->ApplyChanges();
 check(latest($m)['info1'] === "\u{FFFD}", 'Invalid UTF-8 repaired in full state');
 $m->MessageSink(0,20,VM_UPDATE,[]); check(latest($m)['info1'] === "\u{FFFD}", 'Invalid UTF-8 repaired in delta');
@@ -128,7 +128,7 @@ check(!str_contains($list->GetConfigurationForm(), '"repeat"') && !str_contains(
 // --- Entfernung am Foto ---------------------------------------------------
 $dist = register(new TileVisuresidencystatustile()); $dist->InstanceID = 12351; register($dist);
 $dist->Create();
-resident(500); resident(501, '2,4 km'); resident(502, 'Arbeit');
+resident(500, false); resident(501, '2,4 km'); resident(502, 'Arbeit');
 $dist->properties['Residents'] = residents(['Variable' => 500, 'AdditionalInfo' => 502, 'Distance' => 501]);
 $dist->ApplyChanges();
 check(latest($dist)['distance1'] === '2,4 km', 'Distance reaches the tile');
@@ -144,6 +144,25 @@ $dist->properties['Residents'] = residents(['Variable' => 500, 'Distance' => 501
 $dist->ApplyChanges();
 check(latest($dist)['distance1'] === '', 'A deleted distance variable empties the badge');
 check(str_contains($dist->GetConfigurationForm(), 'Select an existing variable.'), 'Invalid distance variable is reported');
+
+// Wer zu Hause ist, braucht keine Entfernung.
+resident(510, '42 km');
+$dist->properties['Residents'] = residents(['Variable' => 500, 'Distance' => 510]);
+$variables[500]['value'] = false; $dist->ApplyChanges();
+check(latest($dist)['distance1'] === '42 km', 'Away shows the distance');
+$variables[500]['value'] = true; $dist->ApplyChanges();
+check(latest($dist)['distance1'] === '', 'At home hides the badge');
+$variables[500]['value'] = false;
+$dist->MessageSink(0, 500, VM_UPDATE, []);
+check(latest($dist) === ['value1' => false, 'distance1' => '42 km'], 'Leaving home brings the badge back in one delta');
+$variables[500]['value'] = true;
+$dist->MessageSink(0, 500, VM_UPDATE, []);
+check(latest($dist) === ['value1' => true, 'distance1' => ''], 'Coming home clears the badge in the same delta');
+$variables[510]['value'] = '7 km';
+$dist->MessageSink(0, 510, VM_UPDATE, []);
+check(latest($dist) === ['distance1' => ''], 'A distance update stays hidden while at home');
+$variables[500]['value'] = false; $dist->ApplyChanges();
+check(latest($dist)['distance1'] === '7 km', 'The updated distance appears after leaving');
 
 // --- Übernahme alter Installationen ---------------------------------------
 $old = new TileVisuresidencystatustile(); $old->InstanceID = 12348; register($old); $old->Create();

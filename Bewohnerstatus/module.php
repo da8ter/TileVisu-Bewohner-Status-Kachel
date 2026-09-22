@@ -105,6 +105,8 @@ class TileVisuresidencystatustile extends IPSModuleStrict
                     $update['name' . $i] = IPS_GetName($SenderID);
                 } elseif ($Message === VM_UPDATE) {
                     $update['value' . $i] = GetValueBoolean($SenderID);
+                    // Der Status entscheidet, ob die Entfernung sichtbar ist.
+                    $update['distance' . $i] = $this->DistanceFor($resident);
                 }
             }
             if ($Message === VM_UPDATE && $SenderID === $resident['AdditionalInfo']
@@ -113,7 +115,7 @@ class TileVisuresidencystatustile extends IPSModuleStrict
             }
             if ($Message === VM_UPDATE && $SenderID === $resident['Distance']
                 && IPS_VariableExists($SenderID)) {
-                $update['distance' . $i] = GetValueFormatted($SenderID);
+                $update['distance' . $i] = $this->DistanceFor($resident);
             }
         }
         if ($update !== []) {
@@ -476,8 +478,7 @@ class TileVisuresidencystatustile extends IPSModuleStrict
             $infoID = $resident['AdditionalInfo'];
             $result['info' . ($index + 1)] = IPS_VariableExists($infoID) ? GetValueFormatted($infoID) : '';
             // Entfernung als Kennzeichen oben rechts am Foto.
-            $distanceID = $resident['Distance'];
-            $result['distance' . ($index + 1)] = IPS_VariableExists($distanceID) ? GetValueFormatted($distanceID) : '';
+            $result['distance' . ($index + 1)] = $this->DistanceFor($resident);
         }
 
         $result['eckenradius'] = $this->BoundedFloat('Eckenradius', 0, 50, 50);
@@ -539,6 +540,18 @@ class TileVisuresidencystatustile extends IPSModuleStrict
             $limited[] = $key === 'bgimage' ? 'bgImage' : 'Bewohner' . $this->ResidentSlot($key, 'image') . 'Image';
         }
         return $limited;
+    }
+
+    // Leerer Text blendet das Kennzeichen aus: wer zu Hause ist, braucht keine
+    // Entfernung. Angezeigt wird sonst der formatierte Variablenwert.
+    private function DistanceFor(array $resident): string
+    {
+        $variableID = $resident['Variable'];
+        if ($this->IsResidentVariable($variableID) && GetValueBoolean($variableID)) {
+            return '';
+        }
+        $id = $resident['Distance'];
+        return IPS_VariableExists($id) ? GetValueFormatted($id) : '';
     }
 
     private function IsResidentVariable(int $id): bool

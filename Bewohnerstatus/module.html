@@ -103,8 +103,14 @@
             right: 6%;
             max-width: 88%;
             box-sizing: border-box;
-            padding: 0.15em 0.5em;
+            display: inline-flex;
+            align-items: center;
+            padding: 0.15em 0.45em;
             border-radius: 999px;
+            border: 0;
+            outline: 0;
+            box-shadow: none;
+            text-shadow: none;
             /* Symcon liefert die Akzentfarbe als --accent-color; der Rueckfall
                gilt nur ausserhalb der Visu. Weisse Schrift wie bei den uebrigen
                Kacheln: die Flaeche ist immer der Akzent, unabhaengig vom Thema. */
@@ -112,10 +118,46 @@
             color: #fff;
             font-size: var(--info-font-size, 8px);
             line-height: 1.35;
+            cursor: pointer;
+        }
+
+        /* Beide Formen bemessen: vor /icons.js ein <i>, danach ein <svg>. */
+        .badge i, .badge svg {
+            flex: 0 0 auto;
+            font-size: 1em;
+            height: 1em;
+            width: auto;
+        }
+
+        /* Eingefahren zeigt das Kennzeichen nur das Symbol. Der Text bleibt im
+           Baum stehen (Vorlesewerkzeuge sollen ihn finden) und faehrt seitlich
+           aus. Kein display: none, sonst gaebe es nichts zu bewegen. */
+        .badge-text {
+            max-width: 0;
+            margin-left: 0;
+            opacity: 0;
             white-space: nowrap;
             overflow: hidden;
-            text-overflow: ellipsis;
-            pointer-events: none; /* darf den Klick auf das Foto nicht abfangen */
+            transition: max-width 0.25s ease, margin-left 0.25s ease, opacity 0.2s ease;
+        }
+
+        .badge.open .badge-text {
+            max-width: 7em;
+            margin-left: 0.35em;
+            opacity: 1;
+        }
+
+        /* Nur mit echtem Zeigegeraet: auf dem Touchscreen bliebe :hover kleben. */
+        @media (hover: hover) {
+            .badge:hover .badge-text {
+                max-width: 7em;
+                margin-left: 0.35em;
+                opacity: 1;
+            }
+        }
+
+        @media (prefers-reduced-motion: reduce) {
+            .badge-text { transition: none; }
         }
 
         .image-wrapper:disabled { cursor: default; }
@@ -160,6 +202,8 @@
             opacity: var(--absent-opacity, 0.5);
         }
     </style>
+
+    <script src="/icons.js"></script>
 </head>
 
 <body>
@@ -196,6 +240,20 @@
             const badge = document.createElement('span');
             badge.className = 'badge hidden';
             badge.id = 'distance' + i;
+            const badgeIcon = document.createElement('i');
+            badgeIcon.className = 'fa-light fa-route';
+            const badgeText = document.createElement('span');
+            badgeText.className = 'badge-text';
+            badge.appendChild(badgeIcon);
+            badge.appendChild(badgeText);
+            /* Auf dem Touchscreen gibt es kein :hover — ein Tipp auf das
+               Kennzeichen fuehrt es aus. Es liegt neben dem Foto-Button, nicht
+               darin, der Tipp schaltet den Bewohner also nicht. */
+            badge.onclick = function () {
+                const offen = badge.classList.toggle('open');
+                clearTimeout(badge.timer);
+                if (offen) badge.timer = setTimeout(function () { badge.classList.toggle('open', false); }, 3000);
+            };
             photo.appendChild(button);
             photo.appendChild(badge);
 
@@ -211,7 +269,7 @@
             root.appendChild(name);
             root.appendChild(info);
             container.appendChild(root);
-            return { root: root, button: button, image: image, name: name, info: info, badge: badge };
+            return { root: root, button: button, image: image, name: name, info: info, badge: badge, badgeText: badgeText };
         }
 
         function ensureSlots(count) {
@@ -264,7 +322,8 @@
                     info.classList.toggle('hidden', update['info' + i] === '');
                 }
                 if (Object.prototype.hasOwnProperty.call(update, 'distance' + i)) {
-                    badge.textContent = update['distance' + i];
+                    // Nur den Textteil setzen, sonst faellt das Symbol wieder heraus.
+                    slot.badgeText.textContent = update['distance' + i];
                     badge.classList.toggle('hidden', update['distance' + i] === '');
                 }
                 if (Object.prototype.hasOwnProperty.call(update, 'image' + i)) {

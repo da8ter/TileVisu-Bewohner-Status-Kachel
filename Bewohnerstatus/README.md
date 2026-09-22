@@ -14,7 +14,7 @@
 ### 1. Funktionsumfang
 
 * Bildet den Anwesenheitsstatus beliebig vieler Bewohner ab. Sie werden in einer Liste eingerichtet, die sich jederzeit erweitern, kürzen und umsortieren lässt. Der Status eines Bewohners wird über eine Bool-Variable gesteuert. Ein Umschalten des Status kann zusätzlich über das Bild erfolgen (kann in der Konfiguration deaktiviert werden). Anwesende Bewohner werden in Farbe, abwesende in Graustufen dargestellt. Es kann je Bewohner ein eigenes Bild verwendet werden.
-* Je Bewohner kann eine Entfernungs-Variable gewählt werden. Ihr formatierter Wert erscheint als kleines Kennzeichen oben rechts am Foto und aktualisiert sich automatisch. Die Schriftgröße folgt der Einstellung „Info Schriftgröße".
+* Je Bewohner kann eine Entfernungs-Variable gewählt werden. Sie erscheint als kleines Kennzeichen in der Symcon-Akzentfarbe oben rechts am Foto: eingefahren nur das Route-Symbol, bei Mauszeiger darüber oder Antippen fährt es seitlich aus und zeigt den formatierten Wert. Ist der Bewohner anwesend, bleibt das Kennzeichen ganz weg. Die Schriftgröße folgt der Einstellung „Info Schriftgröße".
 * Für jeden Bewohner kann eine zusätzliche Info-Variable angezeigt werden (z. B. der aktuelle Standort wie "Arbeit" oder "Entfernung" etc.). Die Inhalte werden automatisch und dynamisch aktualisiert, sobald sich der Wert der gewählten Variable ändert. Es sind alle Variablentypen erlaubt.
 * Die Schriftgröße für den Bewohnernamen und die Zusatzinfo ist individuell einstellbar (Pixel).
 * Der Eckenradius der Bilder ist einstellbar (z.B. 50% für runde Bilder).
@@ -64,7 +64,7 @@ Spalte                     | Beschreibung
 Status                     | Bool-Variable, die den Anwesenheitsstatus des Bewohners steuert (`true` = anwesend, `false` = abwesend). Pflichtangabe je Zeile.
 Zusätzliche Info           | Variable, deren formatierter Inhalt unter dem Bewohnernamen angezeigt wird (z.B. Standort, Statusmeldung). Alle Variablentypen sind erlaubt.
 Foto                       | Auswahl eines eigenen Bildes (Medienobjekt) für den Bewohner.
-Entfernung                 | Variable, deren formatierter Inhalt als kleines Kennzeichen in der Symcon-Akzentfarbe oben rechts am Foto erscheint (z.B. `2,4 km`). Alle Variablentypen sind erlaubt. Ohne Variable oder bei leerem Wert bleibt das Kennzeichen unsichtbar.
+Entfernung                 | Variable, deren formatierter Inhalt im Kennzeichen oben rechts am Foto erscheint (z.B. `2,4 km`). Alle Variablentypen sind erlaubt. Ohne Variable, bei leerem Wert oder solange der Bewohner anwesend ist, bleibt das Kennzeichen unsichtbar.
 Name überschreiben         | Optionaler alternativer Name, der anstelle des Variablennamens angezeigt wird.
 
 ### 5. Statusvariablen und Profile
@@ -93,6 +93,9 @@ Die maximale Bildbreite ist von 10 bis 100 Prozent einstellbar (Standard: 80 Pro
 * Bewohnerfotos werden nur für die Kachel verkleinert (längste Kante 512 px, Ziel unter 128 KiB, WebP sofern verfügbar). Die Medienobjekte selbst bleiben unverändert. Ohne PHP-GD entfällt die Verkleinerung; die Konfigurationsseite weist darauf hin.
 * Die Kachel baut ihre Bewohnerplätze aus der Nachricht auf. Eine geöffnete Kachel folgt einer geänderten Liste sofort, ohne neu geladen zu werden.
 * Das Entfernungs-Kennzeichen bleibt innerhalb des Fotorahmens, weil die Kachel auf `overflow: hidden` steht; in der obersten Reihe wäre ein überstehendes Kennzeichen sonst abgeschnitten.
+* Das Symbol stammt aus der Font-Awesome-Ausgabe, die Symcon unter `/icons.js` ausliefert (`fa-light fa-route`). Steht sie nicht zur Verfügung, bleibt nur der Text — die Kachel funktioniert weiter.
+* Angetippt bleibt das Kennzeichen drei Sekunden offen und fährt dann von selbst wieder ein. Ein zweiter Tipp schließt es sofort. Der Tipp auf das Kennzeichen schaltet den Anwesenheitsstatus **nicht** um.
+* Der Text bleibt auch eingefahren im Dokument stehen, damit Vorlesewerkzeuge ihn finden.
 * **Übernahme alter Installationen:** Bis Version 1.1.0 gab es fünf feste Bewohner-Felder. Beim ersten Start nach dem Update wandert deren Inhalt automatisch in die Liste — Lücken werden geschlossen, Foto, Zusatzinfo und alternativer Name bleiben erhalten; die Entfernung bleibt leer, die gab es vorher nicht. Die alten Felder werden danach geleert, die Übernahme läuft genau einmal und wird im Meldungslog vermerkt. Wer die Liste anschließend leert, bekommt die alten Bewohner nicht zurück.
 
 Entwicklung und Prüfschritte: [Regressionstests](../tests/README.md).

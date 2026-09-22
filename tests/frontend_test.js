@@ -14,7 +14,15 @@ class Element {
     constructor(tag = 'div') {
         this.tag = tag;
         this.classes = new Set();
-        this.classList = { toggle: (name, on) => on ? this.classes.add(name) : this.classes.delete(name) };
+        // Wie im echten DOM: ohne zweites Argument umschalten und den neuen
+        // Zustand zurueckgeben, mit Argument setzen.
+        this.classList = {
+            toggle: (name, force) => {
+                const on = force === undefined ? !this.classes.has(name) : !!force;
+                if (on) this.classes.add(name); else this.classes.delete(name);
+                return on;
+            },
+        };
         this.style = { setProperty: (key, value) => { this.style[key] = value; } };
         this.attributes = {};
         this.children = [];
@@ -38,10 +46,13 @@ function fixture() {
         getElementById: id => (id === 'container' ? container : undefined),
     };
     const actions = [];
+    const timers = [];
     const context = vm.createContext({
         document,
         console: { warn() {} },
         requestAction: (ident, value) => actions.push([ident, value]),
+        setTimeout: (fn, ms) => { timers.push(fn); return timers.length; },
+        clearTimeout: handle => { if (handle) timers[handle - 1] = null; },
     });
     vm.runInContext(script, context);
     const slot = i => {
@@ -49,10 +60,13 @@ function fixture() {
         if (root === undefined) return undefined;
         const [photo, name, info] = root.children;
         const [button, badge] = photo.children;
-        return { root, photo, button, badge, image: button.children[0], name, info };
+        const [badgeIcon, badgeText] = badge.children;
+        return { root, photo, button, badge, badgeIcon, badgeText, image: button.children[0], name, info };
     };
     return {
         container, slot, actions, document,
+        // Alle noch offenen Zeitgeber ausloesen, statt wirklich zu warten.
+        ablaufen: () => timers.splice(0).forEach(fn => fn && fn()),
         send: value => context.handleMessage(JSON.stringify(value)),
         raw: value => context.handleMessage(value),
     };
@@ -83,18 +97,68 @@ assert.deepEqual(f.actions, [['Bewohner2', 1]]);
 
 // Entfernung als Kennzeichen oben rechts am Foto.
 assert(f.slot(1).badge.classes.has('badge') && f.slot(1).badge.classes.has('hidden'));
-assert.equal(f.slot(1).badge.textContent, '');
-f.send({ distance1: '2,4 km' });
-assert.equal(f.slot(1).badge.textContent, '2,4 km');
+assert.equal(f.slot(1).badgeText.textContent, '');
+// Das Symbol steht vor dem Text und darf vom Text nicht verdraengt werden.
+assert.equal(f.slot(1).badgeIcon.tag, 'i');
+assert(f.slot(1).badgeIcon.classes.has('fa-light') && f.slot(1).badgeIcon.classes.has('fa-route'));
+f.send({ distance1: '12,4 km' });
+assert.equal(f.slot(1).badgeText.textContent, '12,4 km');
+assert.equal(f.slot(1).badge.children.length, 2);
+assert(f.slot(1).badgeIcon.classes.has('fa-route'));
 assert(!f.slot(1).badge.classes.has('hidden'));
+
+// Eingefahren: nur das Symbol. Ein Tipp faehrt aus, der naechste wieder ein,
+// und nach der Wartezeit faellt es von selbst zu.
+assert(!f.slot(1).badge.classes.has('open'));
+f.slot(1).badge.onclick();
+assert(f.slot(1).badge.classes.has('open'));
+f.slot(1).badge.onclick();
+assert(!f.slot(1).badge.classes.has('open'));
+f.slot(1).badge.onclick();
+assert(f.slot(1).badge.classes.has('open'));
+f.ablaufen();
+assert(!f.slot(1).badge.classes.has('open'));
+// Der Tipp auf das Kennzeichen darf den Bewohner nicht schalten.
+const vorher = f.actions.length;
+f.slot(1).badge.onclick();
+assert.equal(f.actions.length, vorher);
+f.ablaufen();
+
+// Der Text steht auch eingefahren im Baum — Vorlesewerkzeuge sollen ihn finden.
+const textRegel = raw.match(/\.badge-text\s*\{([^}]*)\}/)[1];
+assert(/max-width:\s*0;/.test(textRegel) && !/display:\s*none/.test(textRegel));
+assert(/\.badge\.open \.badge-text\s*\{[^}]*max-width:\s*7em/.test(raw));
+assert(/@media \(hover: hover\)\s*\{\s*\.badge:hover \.badge-text/.test(raw));
+assert(raw.includes('prefers-reduced-motion'));
+
 f.send({ distance1: '' });
 assert(f.slot(1).badge.classes.has('hidden'));
+// Symcon liefert Font Awesome unter /icons.js und ersetzt <i> erst nachtraeglich
+// durch ein <svg>; beide Formen muessen bemessen sein.
+assert(raw.includes('<script src="/icons.js"></script>'));
+assert(/\.badge i, \.badge svg\s*\{/.test(raw));
+// Flach: keine Umrandung, kein Schatten, keine Kontur. Die Regel wird zerlegt,
+// statt sie mit einem Ausdruck zu erraten.
+const declarations = new Map(raw.match(/\.badge\s*\{([^}]*)\}/)[1]
+    .replace(/\/\*[\s\S]*?\*\//g, '')
+    .split(';').map(part => part.trim()).filter(Boolean)
+    .map(part => part.split(':').map(piece => piece.trim())));
+assert.equal(declarations.get('border'), '0');
+assert.equal(declarations.get('outline'), '0');
+assert.equal(declarations.get('box-shadow'), 'none');
+assert.equal(declarations.get('text-shadow'), 'none');
+for (const forbidden of ['filter', 'backdrop-filter', 'border-width', 'border-style']) {
+    assert.equal(declarations.get(forbidden), undefined);
+}
+assert.equal(declarations.get('background'), 'var(--accent-color, #00cdab)');
+// Das Kennzeichen muss Tipp und Zeiger annehmen koennen.
+assert.notEqual(declarations.get('pointer-events'), 'none');
+assert.equal(declarations.get('cursor'), 'pointer');
 assert(raw.includes('.photo {') && /\.badge\s*\{[^}]*position:\s*absolute/.test(raw));
 // Das Kennzeichen darf den Fotorahmen nicht verlassen; html schneidet ab.
 assert(!/\.badge\s*\{[^}]*transform:/.test(raw));
 // Akzentfarbe aus Symcon, nicht schwarz.
 assert(/\.badge\s*\{[^}]*background:\s*var\(--accent-color/.test(raw));
-assert(/\.badge\s*\{[^}]*pointer-events:\s*none/.test(raw));
 
 f.send({ nameswitch: true });
 assert(!f.slot(1).name.classes.has('hidden'));
@@ -153,4 +217,4 @@ const state = f => JSON.stringify(f.container.children.map(describe));
 assert.equal(state(left), state(right));
 assert.equal(left.document.documentElement.style['--name-font-size'], right.document.documentElement.style['--name-font-size']);
 
-console.log('PASS: Frontend slot building, deltas, ordering, escaping, visibility, operation, ARIA state, distance badge, absent styling and malformed messages');
+console.log('PASS: Frontend slot building, deltas, ordering, escaping, visibility, operation, ARIA state, sliding distance badge, absent styling and malformed messages');
