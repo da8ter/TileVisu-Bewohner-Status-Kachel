@@ -10,6 +10,17 @@
             outline-offset: 2px;
         }
 
+        :root {
+            /* Von Symcon in der Kachel-Adresse uebergeben; 0 solange sie fehlen.
+               Der untere Rand bleibt aussen vor, unten steht nichts an. */
+            --sym-mt: 0px;
+            --sym-ms: 0px;
+            /* Grenzen fuer das Kennzeichen. Es waechst mit dem Foto, bleibt
+               aber in diesem Rahmen lesbar und dezent. */
+            --badge-min: 7px;
+            --badge-max: 13px;
+        }
+
         html {
             background-color: var(--hintergrundfarbe);
             overflow: hidden;
@@ -33,6 +44,8 @@
         body {
             justify-content: center;
             display: flex;
+            /* Die Raender kommen vom System und liegen am Raster, nicht am Body. */
+            margin: 0;
         }
 
         .hidden {
@@ -52,8 +65,13 @@
             /* Die Kachel setzt ihre Raender selbst: die Systemwerte aus der
                Adresse (margintop/marginside/marginbottom) wuerden hier doppelt
                wirken, weil die Bewohnerreihe ohnehin zentriert ist und die
-               Bildbreite ueber ImageMaxWidth begrenzt wird. */
-            padding: 0;
+               Bildbreite ueber ImageMaxWidth begrenzt wird.
+               Oben und seitlich gilt der Wert aus der Kachel-Adresse. Das
+               Kennzeichen darf in den oberen Rand hineinragen; nur wenn der
+               kleiner ist als sein Ueberstand, wird auf eine halbe
+               Kennzeichenhoehe aufgefuellt — sonst schneidet das
+               overflow: hidden am html-Element es in der obersten Reihe ab. */
+            padding: max(var(--sym-mt), calc(var(--badge-max) * 0.95)) var(--sym-ms) 0 var(--sym-ms);
         }
 
         .bewohner_div {
@@ -71,6 +89,8 @@
            overflow: hidden schneidet und das Kennzeichen ueber den Rand ragt. */
         .photo {
             position: relative;
+            /* Bezugsgroesse fuer das Kennzeichen: 1cqw = 1 % der Fotobreite. */
+            container-type: size;
             width: 100%; /* Nimmt volle Breite der Grid-Spalte */
             max-width: var(--image-max-width, 80%); /* Maximale Größe des Bildkreises, anpassbar über die Konfiguration */
             aspect-ratio: 1 / 1; /* Behält ein quadratisches Seitenverhältnis bei */
@@ -101,6 +121,8 @@
                obersten Reihe abgeschnitten. */
             top: 0;
             right: 0;
+            /* Eine halbe Hoehe nach oben aus dem Foto heraus. */
+            transform: translateY(-50%);
             max-width: 100%;
             box-sizing: border-box;
             display: inline-flex;
@@ -123,7 +145,8 @@
                Kacheln: die Flaeche ist immer der Akzent, unabhaengig vom Thema. */
             background: var(--accent-color, #00cdab);
             color: #fff;
-            font-size: var(--info-font-size, 8px);
+            /* Waechst mit dem Foto, gedeckelt durch die Grenzen oben. */
+            font-size: clamp(var(--badge-min), 10cqw, var(--badge-max));
             line-height: 1.35;
             cursor: pointer;
         }
@@ -209,6 +232,24 @@
             opacity: var(--absent-opacity, 0.5);
         }
     </style>
+
+    <script>
+        /* Systemraender aus der Kachel-Adresse uebernehmen, so frueh wie
+           moeglich — die Variablen muessen vor dem ersten Zeichnen stehen.
+           Unten steht nichts an, marginbottom bleibt deshalb unbeachtet. */
+        (function systemRaender() {
+            try {
+                const p = new URLSearchParams(window.location.search);
+                const px = (name) => {
+                    const v = parseInt(p.get(name), 10);
+                    return (Number.isFinite(v) && v >= 0) ? v + 'px' : null;
+                };
+                const wurzel = document.documentElement.style;
+                const mt = px('margintop');  if (mt !== null) { wurzel.setProperty('--sym-mt', mt); }
+                const ms = px('marginside'); if (ms !== null) { wurzel.setProperty('--sym-ms', ms); }
+            } catch (e) { /* ohne Adresszusatz gelten die Vorgaben (0) */ }
+        })();
+    </script>
 
     <script src="/icons.js"></script>
 </head>

@@ -159,8 +159,6 @@ assert.equal(declarations.get('height'), declarations.get('min-width'));
 assert.equal(declarations.get('box-sizing'), 'border-box');
 assert.equal(declarations.get('border-radius'), '999px');
 assert(raw.includes('.photo {') && /\.badge\s*\{[^}]*position:\s*absolute/.test(raw));
-// Das Kennzeichen darf den Fotorahmen nicht verlassen; html schneidet ab.
-assert(!/\.badge\s*\{[^}]*transform:/.test(raw));
 // Akzentfarbe aus Symcon, nicht schwarz.
 assert(/\.badge\s*\{[^}]*background:\s*var\(--accent-color/.test(raw));
 
@@ -203,9 +201,18 @@ assert.equal(f.document.documentElement.style['--absent-grayscale'], '0%');
 assert.equal(f.document.documentElement.style['--absent-opacity'], '0.25');
 assert(raw.includes('grayscale(var(--absent-grayscale') && raw.includes('opacity: var(--absent-opacity'));
 
-// Die Kachel setzt ihre Raender selbst und liest keine Systemwerte aus der Adresse.
-assert(!/--sym-|URLSearchParams|location\.search/.test(raw));
-assert(/\.container_anwesenheit\s*\{[^}]*padding:\s*0;/.test(raw));
+// Systemraender oben und seitlich, der untere bleibt aussen vor.
+for (const name of ['margintop', 'marginside']) assert(raw.includes("px('" + name + "')"));
+assert(!raw.includes("px('marginbottom')"));
+// Oben bleibt genau der Ueberstand des Kennzeichens frei, sonst schneidet
+// html { overflow: hidden } es in der obersten Reihe ab.
+assert(raw.includes('padding: max(var(--sym-mt), calc(var(--badge-max) * 0.95)) var(--sym-ms) 0 var(--sym-ms);'));
+// Das Kennzeichen waechst mit dem Foto, in Grenzen.
+assert(/\.photo\s*\{[^}]*container-type:\s*size/.test(raw));
+assert.equal(declarations.get('font-size'), 'clamp(var(--badge-min), 10cqw, var(--badge-max))');
+assert(/--badge-min:\s*\d+px;/.test(raw) && /--badge-max:\s*\d+px;/.test(raw));
+assert(/body\s*\{[^}]*margin:\s*0;/.test(raw));
+assert.equal(declarations.get('transform'), 'translateY(-50%)');
 assert(raw.includes('.image-wrapper:focus-visible'));
 assert(!/DebugOutline|debug-outline/.test(raw));
 
