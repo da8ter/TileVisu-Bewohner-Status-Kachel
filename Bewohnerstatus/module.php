@@ -4,14 +4,14 @@ declare(strict_types=1);
 
 class TileVisuresidencystatustile extends IPSModuleStrict
 {
-    private const RESIDENT_COUNT = 5;
+    // Nur noch fuer die Uebernahme alter Installationen: so viele feste
+    // Bewohner-Properties gab es vor der Liste.
+    private const LEGACY_SLOTS = 5;
     private const RESIDENT_REFRESH_MESSAGES = [
         'OM_UNREGISTER', 'OM_CHANGETYPE', 'VM_CHANGEPROFILEACTION',
         'VM_CHANGEDLOCKED', 'OM_CHANGEDISABLED', 'OM_CHANGEREADONLY'
     ];
     private const MEDIA_REFRESH_MESSAGES = ['MM_UPDATE', 'MM_CHANGEFILE', 'MM_AVAILABLE', 'OM_UNREGISTER'];
-    private const RESIDENT_TEMPLATE_START = '<!--BEWOHNER-->';
-    private const RESIDENT_TEMPLATE_END = '<!--/BEWOHNER-->';
     private const MAX_IMAGE_BYTES = 5 * 1024 * 1024;
     private const THUMBNAIL_EDGE = 512;
     private const MAX_THUMBNAIL_BYTES = 128 * 1024;
@@ -25,17 +25,25 @@ class TileVisuresidencystatustile extends IPSModuleStrict
     ];
 
     private ?string $placeholder = null;
+    private ?array $residents = null;
+    private ?array $thumbnails = null;
+    private array $thumbnailsUsed = [];
 
     public function Create(): void
     {
         parent::Create();
 
-        for ($i = 1; $i <= self::RESIDENT_COUNT; $i++) {
+        $this->RegisterPropertyString('Residents', '[]');
+        // Die alten Einzel-Properties bleiben registriert, sonst laesst sich eine
+        // bestehende Installation nicht mehr auslesen. Sie stehen in keinem
+        // Formular mehr und werden bei der Uebernahme geleert.
+        for ($i = 1; $i <= self::LEGACY_SLOTS; $i++) {
             $this->RegisterPropertyInteger('Bewohner' . $i, 0);
             $this->RegisterPropertyInteger('AdditionalInfo' . $i, 0);
             $this->RegisterPropertyInteger('Bewohner' . $i . 'Image', 0);
             $this->RegisterPropertyString('Bewohner' . $i . 'AltName', '');
         }
+        $this->RegisterAttributeBoolean('LegacyImported', false);
         $this->RegisterPropertyFloat('Schriftgroesse', 10);
         $this->RegisterPropertyFloat('InfoSchriftgroesse', 8);
         $this->RegisterPropertyFloat('Eckenradius', 50);
@@ -56,11 +64,18 @@ class TileVisuresidencystatustile extends IPSModuleStrict
     public function ApplyChanges(): void
     {
         parent::ApplyChanges();
+        $this->residents = null;
 
         // Kein Heavy Work vor KR_READY: Referenzen, Messages und Fremdvariablen-Zugriffe
         // erst, wenn der Kernel bereit ist.
         if (IPS_GetKernelRunlevel() !== KR_READY) {
             $this->RegisterMessage(0, IPS_KERNELSTARTED);
+            return;
+        }
+
+        // Uebernahme alter Installationen. Schreibt sie Properties, ruft sie
+        // IPS_ApplyChanges und dieser Durchlauf endet hier.
+        if ($this->ImportLegacyResidents()) {
             return;
         }
 
@@ -83,15 +98,16 @@ class TileVisuresidencystatustile extends IPSModuleStrict
         }
 
         $update = [];
-        for ($i = 1; $i <= self::RESIDENT_COUNT; $i++) {
-            if ($SenderID === $this->ReadPropertyInteger('Bewohner' . $i) && $this->IsResidentVariable($SenderID)) {
-                if ($Message === OM_CHANGENAME && $this->ReadPropertyString('Bewohner' . $i . 'AltName') === '') {
+        foreach ($this->Residents() as $index => $resident) {
+            $i = $index + 1;
+            if ($SenderID === $resident['Variable'] && $this->IsResidentVariable($SenderID)) {
+                if ($Message === OM_CHANGENAME && $resident['AltName'] === '') {
                     $update['name' . $i] = IPS_GetName($SenderID);
                 } elseif ($Message === VM_UPDATE) {
                     $update['value' . $i] = GetValueBoolean($SenderID);
                 }
             }
-            if ($Message === VM_UPDATE && $SenderID === $this->ReadPropertyInteger('AdditionalInfo' . $i)
+            if ($Message === VM_UPDATE && $SenderID === $resident['AdditionalInfo']
                 && IPS_VariableExists($SenderID)) {
                 $update['info' . $i] = GetValueFormatted($SenderID);
             }
@@ -105,7 +121,8 @@ class TileVisuresidencystatustile extends IPSModuleStrict
     {
         // Die Darstellung bedient ausschließlich die Bewohner-Status-Variablen —
         // alle anderen Idents werden an der Systemgrenze abgewiesen.
-        if ($this->ResidentSlot($Ident, 'Bewohner') === 0) {
+        $slot = $this->ResidentSlot($Ident, 'Bewohner');
+        if ($slot === 0) {
             throw new Exception('Invalid ident: ' . $Ident);
         }
 
@@ -113,7 +130,7 @@ class TileVisuresidencystatustile extends IPSModuleStrict
             return; // Bedienung ist gesperrt
         }
 
-        $variableID = $this->ReadPropertyInteger($Ident);
+        $variableID = $this->Residents()[$slot - 1]['Variable'];
         if (!$this->CanOperate($variableID)) {
             $this->SendDebug('RequestAction', 'Resident variable is invalid or not operable', 0);
             return;
@@ -136,7 +153,6 @@ class TileVisuresidencystatustile extends IPSModuleStrict
             $this->LogMessage('module.html could not be loaded', KL_ERROR);
             return '';
         }
-        $module = $this->RenderResidents($module);
 
         // Initiale Werte analog zu Laufzeit-Updates setzen. Das doppelte json_encode ist
         // beabsichtigt: es liefert den JSON-String als korrekt escaptes JS-Stringliteral.
@@ -146,27 +162,66 @@ class TileVisuresidencystatustile extends IPSModuleStrict
         return $module . $initialHandling;
     }
 
-    // Die Kachel enthaelt genau einen Bewohnerblock als Vorlage. Allein
-    // RESIDENT_COUNT bestimmt, wie oft er eingesetzt wird; {i} traegt die Nummer.
-    private function RenderResidents(string $module): string
+    // Einzige Quelle fuer die Bewohner: die Liste aus der Konfiguration.
+    private function Residents(): array
     {
-        $start = strpos($module, self::RESIDENT_TEMPLATE_START);
-        $end = strpos($module, self::RESIDENT_TEMPLATE_END);
-        if ($start === false || $end === false || $end < $start) {
-            $this->LogMessage('module.html: resident template markers missing', KL_ERROR);
-            return $module;
+        if ($this->residents !== null) {
+            return $this->residents;
         }
-        $from = $start + strlen(self::RESIDENT_TEMPLATE_START);
-        $template = substr($module, $from, $end - $from);
-        $blocks = '';
-        for ($i = 1; $i <= self::RESIDENT_COUNT; $i++) {
-            $blocks .= str_replace('{i}', (string) $i, $template);
+        $rows = json_decode($this->ReadPropertyString('Residents'), true);
+        $this->residents = [];
+        foreach (is_array($rows) ? $rows : [] as $row) {
+            if (!is_array($row)) {
+                continue;
+            }
+            $this->residents[] = [
+                'Variable'       => (int) ($row['Variable'] ?? 0),
+                'AdditionalInfo' => (int) ($row['AdditionalInfo'] ?? 0),
+                'Image'          => (int) ($row['Image'] ?? 0),
+                'AltName'        => (string) ($row['AltName'] ?? ''),
+            ];
         }
-        return substr($module, 0, $start) . $blocks . substr($module, $end + strlen(self::RESIDENT_TEMPLATE_END));
+        return $this->residents;
     }
 
-    // Nummer aus Ident oder Datenschluessel gegen RESIDENT_COUNT pruefen,
-    // damit die Bewohnerzahl nirgends zusaetzlich ausgeschrieben steht.
+    // Uebernahme aus den fuenf festen Slots. Laeuft genau einmal je Instanz:
+    // das Attribut wird vor dem Schreiben gesetzt, damit der durch
+    // IPS_ApplyChanges ausgeloeste zweite Durchlauf nicht erneut uebernimmt.
+    private function ImportLegacyResidents(): bool
+    {
+        if ($this->ReadAttributeBoolean('LegacyImported')) {
+            return false;
+        }
+        $rows = [];
+        for ($i = 1; $i <= self::LEGACY_SLOTS; $i++) {
+            $row = [
+                'Variable'       => $this->ReadPropertyInteger('Bewohner' . $i),
+                'AdditionalInfo' => $this->ReadPropertyInteger('AdditionalInfo' . $i),
+                'Image'          => $this->ReadPropertyInteger('Bewohner' . $i . 'Image'),
+                'AltName'        => $this->ReadPropertyString('Bewohner' . $i . 'AltName'),
+            ];
+            if ($row['Variable'] !== 0 || $row['AdditionalInfo'] !== 0 || $row['Image'] !== 0 || $row['AltName'] !== '') {
+                $rows[] = $row;
+            }
+        }
+        $this->WriteAttributeBoolean('LegacyImported', true);
+        if ($rows === [] || $this->Residents() !== []) {
+            return false; // Neue Installation oder bereits gepflegte Liste
+        }
+
+        IPS_SetProperty($this->InstanceID, 'Residents', $this->EncodeJSON($rows));
+        for ($i = 1; $i <= self::LEGACY_SLOTS; $i++) {
+            IPS_SetProperty($this->InstanceID, 'Bewohner' . $i, 0);
+            IPS_SetProperty($this->InstanceID, 'AdditionalInfo' . $i, 0);
+            IPS_SetProperty($this->InstanceID, 'Bewohner' . $i . 'Image', 0);
+            IPS_SetProperty($this->InstanceID, 'Bewohner' . $i . 'AltName', '');
+        }
+        $this->LogMessage(sprintf('Migrated %d residents from the fixed slots to the resident list', count($rows)), KL_NOTIFY);
+        IPS_ApplyChanges($this->InstanceID);
+        return true;
+    }
+
+    // Nummer aus Ident oder Datenschluessel gegen die Liste pruefen.
     private function ResidentSlot(string $key, string $prefix): int
     {
         if (!str_starts_with($key, $prefix)) {
@@ -177,51 +232,7 @@ class TileVisuresidencystatustile extends IPSModuleStrict
             return 0;
         }
         $slot = (int) $suffix;
-        return $slot >= 1 && $slot <= self::RESIDENT_COUNT ? $slot : 0;
-    }
-
-    // Formularzeilen mit "repeat": "resident" sind Vorlagen: sie werden
-    // RESIDENT_COUNT-mal eingesetzt, {i} traegt die Nummer. So bestimmt die
-    // Konstante auch die Konfiguration, nicht nur die Kachel.
-    private function ExpandResidentElements(array $elements): array
-    {
-        $expanded = [];
-        $template = [];
-        foreach ($elements as $element) {
-            if (($element['repeat'] ?? '') === 'resident') {
-                unset($element['repeat']);
-                $template[] = $element;
-                continue;
-            }
-            $expanded = array_merge($expanded, $this->RepeatForSlots($template));
-            $template = [];
-            $expanded[] = $element;
-        }
-        return array_merge($expanded, $this->RepeatForSlots($template));
-    }
-
-    private function RepeatForSlots(array $template): array
-    {
-        $rows = [];
-        for ($i = 1; $template !== [] && $i <= self::RESIDENT_COUNT; $i++) {
-            foreach ($template as $element) {
-                $rows[] = $this->SubstituteSlot($element, $i);
-            }
-        }
-        return $rows;
-    }
-
-    private function SubstituteSlot(mixed $value, int $slot): mixed
-    {
-        if (is_string($value)) {
-            return str_replace('{i}', (string) $slot, $value);
-        }
-        if (is_array($value)) {
-            foreach ($value as $key => $item) {
-                $value[$key] = $this->SubstituteSlot($item, $slot);
-            }
-        }
-        return $value;
+        return $slot >= 1 && $slot <= count($this->Residents()) ? $slot : 0;
     }
 
     private function IsImageKey(string $key): bool
@@ -259,27 +270,36 @@ class TileVisuresidencystatustile extends IPSModuleStrict
             }
         }
 
-        $register = function (int $id, array $messages): void {
+        // Dieselbe Variable darf in mehreren Zeilen der Liste stehen; Referenz
+        // und Abo werden trotzdem nur einmal eingetragen.
+        $seen = [];
+        $register = function (int $id, array $messages) use (&$seen): void {
             if ($id <= 0 || !IPS_ObjectExists($id)) {
                 return;
             }
-            $this->RegisterReference($id);
+            if (!isset($seen[$id])) {
+                $this->RegisterReference($id);
+                $seen[$id] = [];
+            }
             foreach ($messages as $message) {
-                $this->RegisterMessage($id, $message);
+                if (!isset($seen[$id][$message])) {
+                    $seen[$id][$message] = true;
+                    $this->RegisterMessage($id, $message);
+                }
             }
         };
 
         $mediaMessages = $this->SupportedMessages(self::MEDIA_REFRESH_MESSAGES);
         $residentMessages = array_merge([OM_CHANGENAME, VM_UPDATE], $this->SupportedMessages(self::RESIDENT_REFRESH_MESSAGES));
         $register($this->ReadPropertyInteger('bgImage'), $mediaMessages);
-        for ($i = 1; $i <= self::RESIDENT_COUNT; $i++) {
-            $register($this->ReadPropertyInteger('Bewohner' . $i), $residentMessages);
-            $register($this->ReadPropertyInteger('AdditionalInfo' . $i), [VM_UPDATE, OM_UNREGISTER]);
-            $register($this->ReadPropertyInteger('Bewohner' . $i . 'Image'), $mediaMessages);
+        foreach ($this->Residents() as $resident) {
+            $register($resident['Variable'], $residentMessages);
+            $register($resident['AdditionalInfo'], [VM_UPDATE, OM_UNREGISTER]);
+            $register($resident['Image'], $mediaMessages);
         }
     }
 
-    private function GetBase64ImageData(int $imageID, string $defaultImagePath = '', int $residentSlot = 0): string
+    private function GetBase64ImageData(int $imageID, string $defaultImagePath = '', bool $resident = false): string
     {
         if (IPS_MediaExists($imageID)) {
             $image = IPS_GetMedia($imageID);
@@ -289,8 +309,8 @@ class TileVisuresidencystatustile extends IPSModuleStrict
                     $content = IPS_GetMediaContent($imageID);
                     // Bound source size before optional resident thumbnail generation.
                     if ($content !== '' && strlen($content) <= 4 * (int)ceil(self::MAX_IMAGE_BYTES / 3)) {
-                        if ($residentSlot > 0) {
-                            $thumbnail = $this->ResidentThumbnail($content, $residentSlot);
+                        if ($resident) {
+                            $thumbnail = $this->ResidentThumbnail($content, $imageID);
                             if ($thumbnail !== '') {
                                 return $thumbnail;
                             }
@@ -314,22 +334,36 @@ class TileVisuresidencystatustile extends IPSModuleStrict
         return '';
     }
 
-    private function ResidentThumbnail(string $base64, int $slot): string
+    // Nach Medien-ID zwischengespeichert, nicht nach Platznummer: beim
+    // Umsortieren der Liste bleibt die Miniatur beim Bild. Ein geaenderter
+    // Inhalt verwirft den Eintrag auch bei gleicher ID.
+    private function ResidentThumbnail(string $base64, int $mediaID): string
     {
         if (!function_exists('imagecreatefromstring') || !function_exists('imagepng')) {
             return ''; // GD is optional. The combined output budget remains enforced.
         }
-        $cacheKey = 'ResidentThumbnail' . $slot;
-        $hash = hash('sha256', 'v1:' . $base64);
-        $cached = json_decode($this->GetBuffer($cacheKey), true);
-        if (is_array($cached) && ($cached['hash'] ?? '') === $hash) {
-            return $cached['image'];
+        if ($this->thumbnails === null) {
+            $cached = json_decode($this->GetBuffer('Thumbnails'), true);
+            $this->thumbnails = is_array($cached) ? $cached : [];
         }
-        $thumbnail = $this->CreateThumbnail($base64);
-        // At most five small thumbnails, including negative results. A content
-        // change invalidates the entry even when the media ID stays the same.
-        $this->SetBuffer($cacheKey, $this->EncodeJSON(['hash' => $hash, 'image' => $thumbnail]));
-        return $thumbnail;
+        $key = (string) $mediaID;
+        $hash = hash('sha256', 'v1:' . $base64);
+        $entry = $this->thumbnails[$key] ?? null;
+        if (!is_array($entry) || ($entry['hash'] ?? '') !== $hash) {
+            $entry = ['hash' => $hash, 'image' => $this->CreateThumbnail($base64)];
+            $this->thumbnails[$key] = $entry;
+        }
+        $this->thumbnailsUsed[$key] = true;
+        return $entry['image'];
+    }
+
+    // Nur die aktuell verwendeten Bilder behalten: bei beliebig vielen
+    // Bewohnern darf der Puffer nicht mit jeder entfernten Zeile weiterwachsen.
+    private function StoreThumbnails(): void
+    {
+        if ($this->thumbnails !== null) {
+            $this->SetBuffer('Thumbnails', $this->EncodeJSON(array_intersect_key($this->thumbnails, $this->thumbnailsUsed)));
+        }
     }
 
     private function CreateThumbnail(string $base64): string
@@ -419,6 +453,8 @@ class TileVisuresidencystatustile extends IPSModuleStrict
     // Every initial render gets a complete snapshot. Broadcasts omit unchanged images.
     private function GetFullUpdateData(array &$limitedImages = []): array
     {
+        // Jede Momentaufnahme bestimmt neu, welche Miniaturen noch gebraucht werden.
+        $this->thumbnailsUsed = [];
         $result = [];
         $result['nameswitch'] = $this->ReadPropertyBoolean('NameSwitch');
         $result['fontsize'] = $this->BoundedFloat('Schriftgroesse', 1, 50, 10);
@@ -427,9 +463,11 @@ class TileVisuresidencystatustile extends IPSModuleStrict
         $result['abwesenheitstransparenz'] = max(0, min(100, $this->ReadPropertyInteger('Abwesenheitstransparenz'))) / 100;
         $result['infontsize'] = $this->BoundedFloat('InfoSchriftgroesse', 1, 50, 8);
 
-        for ($i = 1; $i <= self::RESIDENT_COUNT; $i++) {
-            $infoID = $this->ReadPropertyInteger('AdditionalInfo' . $i);
-            $result['info' . $i] = IPS_VariableExists($infoID) ? GetValueFormatted($infoID) : '';
+        // Die Kachel baut ihre Bewohnerplaetze aus dieser Zahl auf.
+        $result['residents'] = count($this->Residents());
+        foreach ($this->Residents() as $index => $resident) {
+            $infoID = $resident['AdditionalInfo'];
+            $result['info' . ($index + 1)] = IPS_VariableExists($infoID) ? GetValueFormatted($infoID) : '';
         }
 
         $result['eckenradius'] = $this->BoundedFloat('Eckenradius', 0, 50, 50);
@@ -442,8 +480,9 @@ class TileVisuresidencystatustile extends IPSModuleStrict
             : $this->GetBase64ImageData($this->ReadPropertyInteger('bgImage'));
 
         $defaultBewohnerImagePath = __DIR__ . '/assets/placeholder.png';
-        for ($i = 1; $i <= self::RESIDENT_COUNT; $i++) {
-            $bewohnerID = $this->ReadPropertyInteger('Bewohner' . $i);
+        foreach ($this->Residents() as $index => $resident) {
+            $i = $index + 1;
+            $bewohnerID = $resident['Variable'];
             $valid = $this->IsResidentVariable($bewohnerID);
             $result['Bewohner' . $i] = $valid;
             $result['operable' . $i] = $this->CanOperate($bewohnerID);
@@ -454,17 +493,13 @@ class TileVisuresidencystatustile extends IPSModuleStrict
                 continue;
             }
 
-            $altName = $this->ReadPropertyString('Bewohner' . $i . 'AltName');
-            $result['name' . $i] = $altName !== '' ? $altName : IPS_GetName($bewohnerID);
+            $result['name' . $i] = $resident['AltName'] !== '' ? $resident['AltName'] : IPS_GetName($bewohnerID);
             $result['value' . $i] = GetValueBoolean($bewohnerID);
-            $result['image' . $i] = $this->GetBase64ImageData(
-                $this->ReadPropertyInteger('Bewohner' . $i . 'Image'),
-                $defaultBewohnerImagePath,
-                $i
-            );
+            $result['image' . $i] = $this->GetBase64ImageData($resident['Image'], $defaultBewohnerImagePath, true);
         }
 
         $limitedImages = $this->LimitImagePayload($result);
+        $this->StoreThumbnails();
         return $result;
     }
 
@@ -554,27 +589,23 @@ class TileVisuresidencystatustile extends IPSModuleStrict
     public function GetConfigurationForm(): string
     {
         $form = json_decode(file_get_contents(__DIR__ . '/form.json'), true, 512, JSON_THROW_ON_ERROR);
-        $form['elements'] = $this->ExpandResidentElements($form['elements']);
         $warnings = [];
         if (!function_exists('imagecreatefromstring') || !function_exists('imagepng')) {
             $warnings[] = $this->Translate('PHP GD is unavailable. Resident photos cannot be resized automatically.');
         }
-        for ($i = 1; $i <= self::RESIDENT_COUNT; $i++) {
-            $id = $this->ReadPropertyInteger('Bewohner' . $i);
-            if ($id !== 0 && !$this->IsResidentVariable($id)) {
-                $warnings[] = 'Bewohner' . $i . ': ' . $this->Translate('Select an existing Boolean variable.');
+        $label = static fn (int $slot): string => sprintf('%s %d', 'Bewohner', $slot);
+        $imageProperties = ['bgImage' => $this->ReadPropertyInteger('bgImage')];
+        foreach ($this->Residents() as $index => $resident) {
+            $slot = $index + 1;
+            if ($resident['Variable'] !== 0 && !$this->IsResidentVariable($resident['Variable'])) {
+                $warnings[] = $label($slot) . ': ' . $this->Translate('Select an existing Boolean variable.');
             }
-            $info = $this->ReadPropertyInteger('AdditionalInfo' . $i);
-            if ($info !== 0 && !IPS_VariableExists($info)) {
-                $warnings[] = 'AdditionalInfo' . $i . ': ' . $this->Translate('Select an existing variable.');
+            if ($resident['AdditionalInfo'] !== 0 && !IPS_VariableExists($resident['AdditionalInfo'])) {
+                $warnings[] = $label($slot) . ': ' . $this->Translate('Select an existing variable.');
             }
+            $imageProperties[$label($slot)] = $resident['Image'];
         }
-        $imageProperties = ['bgImage'];
-        for ($i = 1; $i <= self::RESIDENT_COUNT; $i++) {
-            $imageProperties[] = 'Bewohner' . $i . 'Image';
-        }
-        foreach ($imageProperties as $property) {
-            $id = $this->ReadPropertyInteger($property);
+        foreach ($imageProperties as $property => $id) {
             if ($id === 0 || ($property === 'bgImage' && $this->ReadPropertyBoolean('BG_Off'))) {
                 continue;
             }

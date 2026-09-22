@@ -131,6 +131,53 @@
 <body>
 
     <script>
+        /* Die Bewohnerplaetze entstehen zur Laufzeit aus der Nachricht. Die Zahl
+           der Bewohner steht in der Konfiguration und kann sich jederzeit
+           aendern; eine offene Kachel folgt ihr ohne Neuladen. */
+        const slots = [];
+        const MAX_SLOTS = 200;
+
+        function createSlot(i, container) {
+            const root = document.createElement('div');
+            root.className = 'bewohner_div hidden';
+            root.id = 'Bewohner' + i;
+
+            const button = document.createElement('button');
+            button.type = 'button';
+            button.className = 'image-wrapper';
+            button.id = 'button' + i;
+            button.disabled = true;
+            button.setAttribute('aria-pressed', 'false');
+            button.setAttribute('aria-describedby', 'info' + i);
+            button.onclick = function () { requestAction('Bewohner' + i, 1); };
+
+            const image = document.createElement('img');
+            image.className = 'color';
+            image.id = 'image' + i;
+            image.setAttribute('alt', '');
+            button.appendChild(image);
+
+            const name = document.createElement('div');
+            name.className = 'name hidden';
+            name.id = 'name' + i;
+
+            const info = document.createElement('div');
+            info.className = 'info hidden';
+            info.id = 'info' + i;
+
+            root.appendChild(button);
+            root.appendChild(name);
+            root.appendChild(info);
+            container.appendChild(root);
+            return { root: root, button: button, image: image, name: name, info: info };
+        }
+
+        function ensureSlots(count) {
+            const container = document.getElementById('container');
+            while (slots.length > count) { container.removeChild(slots.pop().root); }
+            while (slots.length < count) { slots.push(createSlot(slots.length + 1, container)); }
+        }
+
         function handleMessage(data) {
             let update;
             try {
@@ -157,14 +204,13 @@
             if (Object.prototype.hasOwnProperty.call(update, 'bgimage')) {
                 document.body.style.setProperty('--background-image', update.bgimage ? 'url(' + update.bgimage + ')' : 'none');
             }
-            // Die Bewohnerzahl steht allein im Modul (RESIDENT_COUNT); hier wird
-            // gezaehlt, solange die Vorlage einen weiteren Block geliefert hat.
-            for (let i = 1; document.getElementById('Bewohner' + i); i++) {
-                const resident = document.getElementById('Bewohner' + i);
-                const name = document.getElementById('name' + i);
-                const info = document.getElementById('info' + i);
-                const image = document.getElementById('image' + i);
-                const button = document.getElementById('button' + i);
+            if (Object.prototype.hasOwnProperty.call(update, 'residents')) {
+                const count = Number(update.residents);
+                if (Number.isFinite(count) && count >= 0) ensureSlots(Math.min(Math.floor(count), MAX_SLOTS));
+            }
+            for (let i = 1; i <= slots.length; i++) {
+                const slot = slots[i - 1];
+                const resident = slot.root, name = slot.name, info = slot.info, image = slot.image, button = slot.button;
                 if (Object.prototype.hasOwnProperty.call(update, 'Bewohner' + i)) resident.classList.toggle('hidden', !update['Bewohner' + i]);
                 if (Object.prototype.hasOwnProperty.call(update, 'nameswitch')) name.classList.toggle('hidden', !update.nameswitch);
                 if (Object.prototype.hasOwnProperty.call(update, 'name' + i)) {
@@ -190,18 +236,7 @@
         }
     </script>
 
-
-    <div class="container_anwesenheit" id="container">
-<!--BEWOHNER-->
-        <div class="bewohner_div hidden" id="Bewohner{i}">
-            <button type="button" class="image-wrapper" id="button{i}" disabled aria-pressed="false" aria-describedby="info{i}" onclick="requestAction('Bewohner{i}', 1);">
-                <img class="color" id="image{i}" alt="">
-            </button>
-            <div class="name hidden" id="name{i}"></div>
-            <div class="info hidden" id="info{i}"></div>
-        </div>
-    <!--/BEWOHNER-->
-    </div>
+    <div class="container_anwesenheit" id="container"></div>
 
 </body>
 

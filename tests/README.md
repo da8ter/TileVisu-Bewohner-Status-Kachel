@@ -13,15 +13,17 @@ git diff --check
 
 Der zweite PHP-Lauf lässt `VM_CHANGEDLOCKED` absichtlich undefiniert und prüft damit Instanzerstellung, Kernelstart und Nachrichtenverarbeitung auch ohne diese optionale SDK-Konstante.
 
-Die PHP-Tests prüfen zusätzlich, dass Kachel und Konfigurationsformular genau `RESIDENT_COUNT` Bewohner erzeugen, dass Idents außerhalb dieses Bereichs abgewiesen werden und dass die Darstellung abwesender Bewohner der Konfiguration folgt.
+Die PHP-Tests prüfen zusätzlich die Bewohnerliste (zwölf Zeilen, Kürzen, leere und kaputte Listendaten, Idents außerhalb der Liste), die Übernahme alter Installationen (Lücken schließen, Felder leeren, genau ein Durchlauf, Neuinstallation, bereits gepflegte Liste, absichtlich geleerte Liste) und die Darstellung abwesender Bewohner.
 
 Die PHP-Tests verwenden isolierte SDK-Doubles. Sie prüfen Kernelstart, Hintergrundentfernung, vollständige Initialzustände trotz Bild-Deltas, WebP und Medienänderungen, Umschaltung mit und ohne Aktion, Schreibschutz, Bedienungssperre, ungültige Zuordnungen, UTF-8, Script-Escaping, Wertebegrenzung, Konfigurationshinweise und Bildgrößenlimit.
 
-Die JavaScript-Tests führen den tatsächlichen Nachrichtencode mit einem minimalen DOM-Double aus. Sie setzen die Bewohnervorlage aus `module.html` so oft ein, wie `RESIDENT_COUNT` in `module.php` vorgibt, und prüfen damit zugleich beide Dateien gegeneinander. Geprüft werden Reihenfolgeunabhängigkeit, vollständige und partielle Updates, Sichtbarkeit, Textausgabe, ARIA-Zustände, Graustufen und Deckkraft bei Abwesenheit und fehlerhafte Nachrichten. Native Tastaturereignisse und CSS-Layout benötigen zusätzlich einen Browser.
+Die JavaScript-Tests führen den tatsächlichen Nachrichtencode mit einem minimalen DOM-Double aus. Die Kachel erzeugt ihre Bewohnerplätze selbst, das DOM-Double beherrscht dafür `createElement`/`appendChild`/`removeChild`. Geprüft werden das Wachsen und Schrumpfen der Liste ohne Neuladen, unsinnige Bewohnerzahlen, Reihenfolgeunabhängigkeit, vollständige und partielle Updates, Sichtbarkeit, Textausgabe, ARIA-Zustände, Graustufen und Deckkraft bei Abwesenheit und fehlerhafte Nachrichten. Native Tastaturereignisse und CSS-Layout benötigen zusätzlich einen Browser.
 
 Vor einer Veröffentlichung in einer Symcon-Testinstanz prüfen:
 
-- Kachel neu öffnen und mit 1 bis 5 Bewohnern in kleinen und großen Kacheln darstellen.
+- Kachel neu öffnen und mit 1, 5 und 15 Bewohnern in kleinen und großen Kacheln darstellen.
+- Bewohner bei geöffneter Kachel hinzufügen, entfernen und umsortieren; die Kachel muss ohne Neuladen folgen.
+- Eine Installation mit den alten fünf Feldern aktualisieren und die Übernahme im Meldungslog prüfen.
 - Hintergrund aktivieren und ohne eigenes Bild wieder deaktivieren.
 - Bewohnerfoto und Hintergrund innerhalb derselben Medien-ID ersetzen.
 - Benutzerdefinierte Boolean-Variable, Variable mit Aktionsskript und schreibgeschützten Sensor testen.

@@ -13,7 +13,7 @@
 
 ### 1. Funktionsumfang
 
-* Bildet den Anwesenheitsstatus von bis zu 5 Bewohnern ab. Der Status eines Bewohners wird über eine Bool-Variable gesteuert. Ein Umschalten des Status kann zusätzlich über das Bild erfolgen (kann in der Konfiguration deaktiviert werden). Anwesende Bewohner werden in Farbe, abwesende in Graustufen dargestellt. Es kann je Bewohner ein eigenes Bild verwendet werden.
+* Bildet den Anwesenheitsstatus beliebig vieler Bewohner ab. Sie werden in einer Liste eingerichtet, die sich jederzeit erweitern, kürzen und umsortieren lässt. Der Status eines Bewohners wird über eine Bool-Variable gesteuert. Ein Umschalten des Status kann zusätzlich über das Bild erfolgen (kann in der Konfiguration deaktiviert werden). Anwesende Bewohner werden in Farbe, abwesende in Graustufen dargestellt. Es kann je Bewohner ein eigenes Bild verwendet werden.
 * Für jeden Bewohner kann eine zusätzliche Info-Variable angezeigt werden (z. B. der aktuelle Standort wie "Arbeit" oder "Entfernung" etc.). Die Inhalte werden automatisch und dynamisch aktualisiert, sobald sich der Wert der gewählten Variable ändert. Es sind alle Variablentypen erlaubt.
 * Die Schriftgröße für den Bewohnernamen und die Zusatzinfo ist individuell einstellbar (Pixel).
 * Der Eckenradius der Bilder ist einstellbar (z.B. 50% für runde Bilder).
@@ -54,14 +54,16 @@ Schriftgröße Name          | Schriftgröße des Bewohnernamens (Standard: `10`
 Schriftgröße Zusatzinfo    | Schriftgröße der Zusatzinformationen (Standard: `8`). Angabe in px.
 Eckenradius Bilder         | Eckenradius für die Bewohnerbilder (z.B. `0` für eckig, `50` für rund). Angabe in Prozent.
 
-**Bewohnerbezogene Einstellungen (für jeden Bewohner 1-5):**
+**Bewohnerliste:**
 
-Name                       | Beschreibung
+Die Bewohner stehen in der Liste „Bewohner". Über „Hinzufügen" und „Entfernen" lassen sich beliebig viele Zeilen anlegen; die Reihenfolge der Zeilen ist zugleich die Reihenfolge in der Kachel und kann per Drag & Drop geändert werden.
+
+Spalte                     | Beschreibung
 -------------------------- | ---------------------------------------------------------------------------------------------------
-Status (Bewohner X)        | Bool-Variable, die den Anwesenheitsstatus des Bewohners steuert (`true` = anwesend, `false` = abwesend).
-Foto (Bewohner X Image)    | Auswahl eines eigenen Bildes (Medienobjekt) für den Bewohner.
-Alternativer Name (Bewohner X AltName) | Optionaler alternativer Name, der anstelle des Variablennamens für den Bewohner angezeigt wird.
-Zusatzinfo (AdditionalInfo X) | Variable, deren formatierter Inhalt unter dem Bewohnernamen angezeigt wird (z.B. Standort, Statusmeldung).
+Status                     | Bool-Variable, die den Anwesenheitsstatus des Bewohners steuert (`true` = anwesend, `false` = abwesend). Pflichtangabe je Zeile.
+Zusätzliche Info           | Variable, deren formatierter Inhalt unter dem Bewohnernamen angezeigt wird (z.B. Standort, Statusmeldung). Alle Variablentypen sind erlaubt.
+Foto                       | Auswahl eines eigenen Bildes (Medienobjekt) für den Bewohner.
+Name überschreiben         | Optionaler alternativer Name, der anstelle des Variablennamens angezeigt wird.
 
 ### 5. Statusvariablen und Profile
 
@@ -81,12 +83,13 @@ Die maximale Bildbreite ist von 10 bis 100 Prozent einstellbar (Standard: 80 Pro
 
 ### 7. PHP-Befehlsreferenz
 
-`IPS_RequestAction($InstanzID, 'Bewohner1', 1)` schaltet den konfigurierten Bewohnerstatus um. Entsprechend stehen `Bewohner2` bis `Bewohner5` zur Verfügung. Der Wertparameter bleibt aus Kompatibilitätsgründen ohne Bedeutung: Der aktuelle Status wird invertiert. Die Bedienungssperre gilt auch für diesen Aufruf.
+`IPS_RequestAction($InstanzID, 'Bewohner1', 1)` schaltet den Status des ersten Bewohners der Liste um; `Bewohner2`, `Bewohner3` usw. entsprechend, bis zur Länge der Liste. Die Nummer bezeichnet die **Position in der Liste**: Wird die Liste umsortiert, zeigt dieselbe Nummer auf einen anderen Bewohner. Der Wertparameter bleibt aus Kompatibilitätsgründen ohne Bedeutung: Der aktuelle Status wird invertiert. Die Bedienungssperre gilt auch für diesen Aufruf.
 
 ### 8. Hinweise
 
 * Die Hinweise auf der Konfigurationsseite (ungültige Variable, nicht unterstütztes Bild, überschrittenes Bildbudget) beziehen sich auf den **übernommenen** Stand. Nach dem Ändern eines Feldes erscheinen sie erst nach "Änderungen übernehmen".
 * Bewohnerfotos werden nur für die Kachel verkleinert (längste Kante 512 px, Ziel unter 128 KiB, WebP sofern verfügbar). Die Medienobjekte selbst bleiben unverändert. Ohne PHP-GD entfällt die Verkleinerung; die Konfigurationsseite weist darauf hin.
-* Die Zahl der Bewohner steht allein in der Konstanten `RESIDENT_COUNT`; Kachel und Konfigurationsformular werden daraus erzeugt.
+* Die Kachel baut ihre Bewohnerplätze aus der Nachricht auf. Eine geöffnete Kachel folgt einer geänderten Liste sofort, ohne neu geladen zu werden.
+* **Übernahme alter Installationen:** Bis Version 1.1.0 gab es fünf feste Bewohner-Felder. Beim ersten Start nach dem Update wandert deren Inhalt automatisch in die Liste — Lücken werden geschlossen, Foto, Zusatzinfo und alternativer Name bleiben erhalten. Die alten Felder werden danach geleert, die Übernahme läuft genau einmal und wird im Meldungslog vermerkt. Wer die Liste anschließend leert, bekommt die alten Bewohner nicht zurück.
 
 Entwicklung und Prüfschritte: [Regressionstests](../tests/README.md).

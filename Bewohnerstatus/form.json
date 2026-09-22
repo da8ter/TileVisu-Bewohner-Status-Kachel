@@ -11,7 +11,7 @@
         },
         {
             "type": "Label",
-            "caption": "Up to 5 residents can be configured. Non-configured residents will be hidden. (Optional) Photos must be created as media objects. Photos should have an aspect ratio of 1:1. If a resident is absent, the photo will be displayed in grayscale. Present residents in color."
+            "caption": "Residents are configured in the list below; as many as you like. (Optional) Photos must be created as media objects. Photos should have an aspect ratio of 1:1. If a resident is absent, the photo will be displayed in grayscale. Present residents in color."
         },
         {
             "type": "Label",
@@ -67,39 +67,58 @@
             ]
         },
         {
-            "type": "Label",
-            "caption": "Resident {i}",
-            "bold": true,
-            "repeat": "resident"
-        },
-        {
-            "type": "RowLayout",
-            "items": [
+            "type": "List",
+            "name": "Residents",
+            "caption": "Residents",
+            "rowCount": 6,
+            "add": true,
+            "delete": true,
+            "changeOrder": true,
+            "columns": [
                 {
-                    "type": "SelectVariable",
-                    "name": "Bewohner{i}",
                     "caption": "Status",
-                    "validVariableTypes": [
-                        0
-                    ]
+                    "name": "Variable",
+                    "width": "auto",
+                    "add": 0,
+                    "save": true,
+                    "edit": {
+                        "type": "SelectVariable",
+                        "validVariableTypes": [
+                            0
+                        ]
+                    }
                 },
                 {
-                    "type": "SelectVariable",
-                    "name": "AdditionalInfo{i}",
-                    "caption": "Additional Info"
+                    "caption": "Additional Info",
+                    "name": "AdditionalInfo",
+                    "width": "260px",
+                    "add": 0,
+                    "save": true,
+                    "edit": {
+                        "type": "SelectVariable"
+                    }
                 },
                 {
-                    "type": "SelectMedia",
-                    "name": "Bewohner{i}Image",
-                    "caption": "Photo"
+                    "caption": "Photo",
+                    "name": "Image",
+                    "width": "260px",
+                    "add": 0,
+                    "save": true,
+                    "edit": {
+                        "type": "SelectMedia"
+                    }
                 },
                 {
-                    "type": "ValidationTextBox",
-                    "name": "Bewohner{i}AltName",
-                    "caption": "Overwrite variable name:"
+                    "caption": "Name override",
+                    "name": "AltName",
+                    "width": "200px",
+                    "add": "",
+                    "save": true,
+                    "edit": {
+                        "type": "ValidationTextBox"
+                    }
                 }
-            ],
-            "repeat": "resident"
+            ]
         },
         {
             "type": "Label",
