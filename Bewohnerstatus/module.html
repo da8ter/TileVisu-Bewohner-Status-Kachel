@@ -96,12 +96,12 @@
         /* Entfernung, oben rechts am Foto. */
         .badge {
             position: absolute;
-            /* Innerhalb des Fotorahmens bleiben: html steht auf overflow: hidden,
-               ein herausragendes Kennzeichen waere in der obersten Reihe weg.
-               6 % ruecken es bei runden Fotos nahe an die Kreiskante. */
-            top: 6%;
-            right: 6%;
-            max-width: 88%;
+            /* In der Bildecke, aber innerhalb des Fotorahmens: html steht auf
+               overflow: hidden, ein herausragendes Kennzeichen waere in der
+               obersten Reihe abgeschnitten. */
+            top: 0;
+            right: 0;
+            max-width: 100%;
             box-sizing: border-box;
             display: inline-flex;
             align-items: center;
