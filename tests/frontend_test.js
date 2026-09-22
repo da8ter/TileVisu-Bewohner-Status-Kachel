@@ -77,8 +77,9 @@ f.send({ graustufen: 0, abwesenheitstransparenz: 0.25 });
 assert.equal(f.document.documentElement.style['--absent-grayscale'], '0%');
 assert.equal(f.document.documentElement.style['--absent-opacity'], '0.25');
 assert(raw.includes('grayscale(var(--absent-grayscale') && raw.includes('opacity: var(--absent-opacity'));
-// Systemraender aus der Kachel-Adresse.
-for (const name of ['margintop', 'marginside', 'marginbottom']) assert(raw.includes("px('" + name + "')"));
-assert(raw.includes('var(--sym-mt) var(--sym-ms) var(--sym-mb) var(--sym-ms)'));
+// Seitenrand aus der Kachel-Adresse; senkrecht bleibt die Kachel bei 0.
+assert(raw.includes("px('marginside')"));
+assert(raw.includes('padding: 0 var(--sym-ms)'));
+assert(!/--sym-mt|--sym-mb|margintop|marginbottom/.test(raw));
 assert(!/DebugOutline|debug-outline/.test(raw));
 console.log('PASS: Frontend deltas, ordering, escaping, visibility, operation, ARIA state, absent styling, tile margins and malformed messages');
