@@ -64,7 +64,7 @@ Spalte                     | Beschreibung
 Status                     | Bool-Variable, die den Anwesenheitsstatus des Bewohners steuert (`true` = anwesend, `false` = abwesend). Pflichtangabe je Zeile.
 Zusätzliche Info           | Variable, deren formatierter Inhalt unter dem Bewohnernamen angezeigt wird (z.B. Standort, Statusmeldung). Alle Variablentypen sind erlaubt.
 Foto                       | Auswahl eines eigenen Bildes (Medienobjekt) für den Bewohner.
-Entfernung                 | Variable, deren formatierter Inhalt als kleines Kennzeichen oben rechts am Foto erscheint (z.B. `2,4 km`). Alle Variablentypen sind erlaubt. Ohne Variable oder bei leerem Wert bleibt das Kennzeichen unsichtbar.
+Entfernung                 | Variable, deren formatierter Inhalt als kleines Kennzeichen in der Symcon-Akzentfarbe oben rechts am Foto erscheint (z.B. `2,4 km`). Alle Variablentypen sind erlaubt. Ohne Variable oder bei leerem Wert bleibt das Kennzeichen unsichtbar.
 Name überschreiben         | Optionaler alternativer Name, der anstelle des Variablennamens angezeigt wird.
 
 ### 5. Statusvariablen und Profile

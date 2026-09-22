@@ -92,6 +92,8 @@ assert(f.slot(1).badge.classes.has('hidden'));
 assert(raw.includes('.photo {') && /\.badge\s*\{[^}]*position:\s*absolute/.test(raw));
 // Das Kennzeichen darf den Fotorahmen nicht verlassen; html schneidet ab.
 assert(!/\.badge\s*\{[^}]*transform:/.test(raw));
+// Akzentfarbe aus Symcon, nicht schwarz.
+assert(/\.badge\s*\{[^}]*background:\s*var\(--accent-color/.test(raw));
 assert(/\.badge\s*\{[^}]*pointer-events:\s*none/.test(raw));
 
 f.send({ nameswitch: true });
