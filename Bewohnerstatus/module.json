@@ -2,8 +2,11 @@
     "id": "{CAB3C88D-F6A5-987A-B0C2-6BEB6286A634}",
     "name": "TileVisu residency status tile",
     "type": 3,
-    "vendor": "da8ter",
-    "aliases": ["Bewohner-Status Kachel", "Anwesenheitsstatus"],
+    "vendor": "Stephan Sprick",
+    "aliases": [
+        "Bewohner-Status Kachel",
+        "Anwesenheitsstatus"
+    ],
     "parentRequirements": [],
     "childRequirements": [],
     "implemented": [],
