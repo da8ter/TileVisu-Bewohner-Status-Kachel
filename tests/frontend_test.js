@@ -47,8 +47,9 @@ function fixture() {
     const slot = i => {
         const root = container.children[i - 1];
         if (root === undefined) return undefined;
-        const [button, name, info] = root.children;
-        return { root, button, image: button.children[0], name, info };
+        const [photo, name, info] = root.children;
+        const [button, badge] = photo.children;
+        return { root, photo, button, badge, image: button.children[0], name, info };
     };
     return {
         container, slot, actions, document,
@@ -79,6 +80,19 @@ assert(f.slot(2).root.classes.has('hidden') && f.slot(3).button.disabled);
 // Der Klick meldet die Platznummer zurueck.
 f.slot(2).button.onclick();
 assert.deepEqual(f.actions, [['Bewohner2', 1]]);
+
+// Entfernung als Kennzeichen oben rechts am Foto.
+assert(f.slot(1).badge.classes.has('badge') && f.slot(1).badge.classes.has('hidden'));
+assert.equal(f.slot(1).badge.textContent, '');
+f.send({ distance1: '2,4 km' });
+assert.equal(f.slot(1).badge.textContent, '2,4 km');
+assert(!f.slot(1).badge.classes.has('hidden'));
+f.send({ distance1: '' });
+assert(f.slot(1).badge.classes.has('hidden'));
+assert(raw.includes('.photo {') && /\.badge\s*\{[^}]*position:\s*absolute/.test(raw));
+// Das Kennzeichen darf den Fotorahmen nicht verlassen; html schneidet ab.
+assert(!/\.badge\s*\{[^}]*transform:/.test(raw));
+assert(/\.badge\s*\{[^}]*pointer-events:\s*none/.test(raw));
 
 f.send({ nameswitch: true });
 assert(!f.slot(1).name.classes.has('hidden'));
@@ -128,14 +142,13 @@ assert(!/DebugOutline|debug-outline/.test(raw));
 for (const input of ['', 'not json', 'null', '[]']) assert.doesNotThrow(() => f.raw(input));
 
 // Reihenfolge der Schluessel darf das Ergebnis nicht aendern.
-const message = { residents: 1, fontsize: 17, nameswitch: true, Bewohner1: true, name1: 'Anna', info1: 'Arbeit', value1: true, operable1: true };
+const message = { residents: 1, fontsize: 17, nameswitch: true, Bewohner1: true, name1: 'Anna', info1: 'Arbeit', distance1: '12 km', value1: true, operable1: true };
 const left = fixture(), right = fixture();
 left.send(message); right.send(Object.fromEntries(Object.entries(message).reverse()));
-const state = f => JSON.stringify(f.container.children.map(root => [
-    [...root.classes].sort(),
-    root.children.map(child => [child.tag, [...child.classes].sort(), child.attributes, child.disabled, child.textContent, child.src]),
-]));
+const describe = node => [node.tag, [...node.classes].sort(), node.attributes, node.disabled, node.textContent, node.src,
+    node.children.map(describe)];
+const state = f => JSON.stringify(f.container.children.map(describe));
 assert.equal(state(left), state(right));
 assert.equal(left.document.documentElement.style['--name-font-size'], right.document.documentElement.style['--name-font-size']);
 
-console.log('PASS: Frontend slot building, deltas, ordering, escaping, visibility, operation, ARIA state, absent styling and malformed messages');
+console.log('PASS: Frontend slot building, deltas, ordering, escaping, visibility, operation, ARIA state, distance badge, absent styling and malformed messages');

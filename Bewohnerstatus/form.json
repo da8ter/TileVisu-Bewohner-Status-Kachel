@@ -109,6 +109,16 @@
                     }
                 },
                 {
+                    "caption": "Distance",
+                    "name": "Distance",
+                    "width": "220px",
+                    "add": 0,
+                    "save": true,
+                    "edit": {
+                        "type": "SelectVariable"
+                    }
+                },
+                {
                     "caption": "Name override",
                     "name": "AltName",
                     "width": "200px",

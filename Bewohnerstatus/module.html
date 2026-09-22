@@ -66,6 +66,18 @@
             gap: 5px; /* Abstand zwischen Bild-Wrapper und Text */
         }
 
+        /* Traegt Groesse und Zentrierung des Fotos und ist der Bezugspunkt fuer
+           das Entfernungs-Kennzeichen. Noetig, weil der Button selbst mit
+           overflow: hidden schneidet und das Kennzeichen ueber den Rand ragt. */
+        .photo {
+            position: relative;
+            width: 100%; /* Nimmt volle Breite der Grid-Spalte */
+            max-width: var(--image-max-width, 80%); /* Maximale Größe des Bildkreises, anpassbar über die Konfiguration */
+            aspect-ratio: 1 / 1; /* Behält ein quadratisches Seitenverhältnis bei */
+            margin-left: auto; /* Zentriert das Foto horizontal */
+            margin-right: auto;
+        }
+
         .image-wrapper {
             padding: 0;
             border: 0;
@@ -76,12 +88,31 @@
             display: flex;
             align-items: center; /* Vertikale Zentrierung des Kind-Elements (img) */
             justify-content: center; /* Horizontale Zentrierung des Kind-Elements (img) */
-            width: 100%; /* Nimmt volle Breite der Grid-Spalte */
-            max-width: var(--image-max-width, 80%); /* Maximale Größe des Bildkreises, anpassbar über die Konfiguration */
-            aspect-ratio: 1 / 1; /* Behält ein quadratisches Seitenverhältnis bei */
-            margin-left: auto; /* Zentriert den Wrapper horizontal */
-            margin-right: auto;
+            width: 100%;
+            height: 100%;
             overflow: hidden; /* Verhindert, dass übergroße Inhalte vor object-fit sichtbar sind */
+        }
+
+        /* Entfernung, oben rechts am Foto. */
+        .badge {
+            position: absolute;
+            /* Innerhalb des Fotorahmens bleiben: html steht auf overflow: hidden,
+               ein herausragendes Kennzeichen waere in der obersten Reihe weg.
+               6 % ruecken es bei runden Fotos nahe an die Kreiskante. */
+            top: 6%;
+            right: 6%;
+            max-width: 88%;
+            box-sizing: border-box;
+            padding: 0.15em 0.5em;
+            border-radius: 999px;
+            background: rgba(0, 0, 0, 0.7);
+            color: #fff;
+            font-size: var(--info-font-size, 8px);
+            line-height: 1.35;
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+            pointer-events: none; /* darf den Klick auf das Foto nicht abfangen */
         }
 
         .image-wrapper:disabled { cursor: default; }
@@ -157,6 +188,14 @@
             image.setAttribute('alt', '');
             button.appendChild(image);
 
+            const photo = document.createElement('div');
+            photo.className = 'photo';
+            const badge = document.createElement('span');
+            badge.className = 'badge hidden';
+            badge.id = 'distance' + i;
+            photo.appendChild(button);
+            photo.appendChild(badge);
+
             const name = document.createElement('div');
             name.className = 'name hidden';
             name.id = 'name' + i;
@@ -165,11 +204,11 @@
             info.className = 'info hidden';
             info.id = 'info' + i;
 
-            root.appendChild(button);
+            root.appendChild(photo);
             root.appendChild(name);
             root.appendChild(info);
             container.appendChild(root);
-            return { root: root, button: button, image: image, name: name, info: info };
+            return { root: root, button: button, image: image, name: name, info: info, badge: badge };
         }
 
         function ensureSlots(count) {
@@ -210,7 +249,7 @@
             }
             for (let i = 1; i <= slots.length; i++) {
                 const slot = slots[i - 1];
-                const resident = slot.root, name = slot.name, info = slot.info, image = slot.image, button = slot.button;
+                const resident = slot.root, name = slot.name, info = slot.info, image = slot.image, button = slot.button, badge = slot.badge;
                 if (Object.prototype.hasOwnProperty.call(update, 'Bewohner' + i)) resident.classList.toggle('hidden', !update['Bewohner' + i]);
                 if (Object.prototype.hasOwnProperty.call(update, 'nameswitch')) name.classList.toggle('hidden', !update.nameswitch);
                 if (Object.prototype.hasOwnProperty.call(update, 'name' + i)) {
@@ -220,6 +259,10 @@
                 if (Object.prototype.hasOwnProperty.call(update, 'info' + i)) {
                     info.textContent = update['info' + i];
                     info.classList.toggle('hidden', update['info' + i] === '');
+                }
+                if (Object.prototype.hasOwnProperty.call(update, 'distance' + i)) {
+                    badge.textContent = update['distance' + i];
+                    badge.classList.toggle('hidden', update['distance' + i] === '');
                 }
                 if (Object.prototype.hasOwnProperty.call(update, 'image' + i)) {
                     if (update['image' + i]) image.src = update['image' + i];

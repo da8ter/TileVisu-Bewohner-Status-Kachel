@@ -111,6 +111,10 @@ class TileVisuresidencystatustile extends IPSModuleStrict
                 && IPS_VariableExists($SenderID)) {
                 $update['info' . $i] = GetValueFormatted($SenderID);
             }
+            if ($Message === VM_UPDATE && $SenderID === $resident['Distance']
+                && IPS_VariableExists($SenderID)) {
+                $update['distance' . $i] = GetValueFormatted($SenderID);
+            }
         }
         if ($update !== []) {
             $this->UpdateVisualizationValue($this->EncodeJSON($update));
@@ -178,6 +182,7 @@ class TileVisuresidencystatustile extends IPSModuleStrict
                 'Variable'       => (int) ($row['Variable'] ?? 0),
                 'AdditionalInfo' => (int) ($row['AdditionalInfo'] ?? 0),
                 'Image'          => (int) ($row['Image'] ?? 0),
+                'Distance'       => (int) ($row['Distance'] ?? 0),
                 'AltName'        => (string) ($row['AltName'] ?? ''),
             ];
         }
@@ -198,6 +203,7 @@ class TileVisuresidencystatustile extends IPSModuleStrict
                 'Variable'       => $this->ReadPropertyInteger('Bewohner' . $i),
                 'AdditionalInfo' => $this->ReadPropertyInteger('AdditionalInfo' . $i),
                 'Image'          => $this->ReadPropertyInteger('Bewohner' . $i . 'Image'),
+                'Distance'       => 0, // gab es in den festen Plaetzen nicht
                 'AltName'        => $this->ReadPropertyString('Bewohner' . $i . 'AltName'),
             ];
             if ($row['Variable'] !== 0 || $row['AdditionalInfo'] !== 0 || $row['Image'] !== 0 || $row['AltName'] !== '') {
@@ -295,6 +301,7 @@ class TileVisuresidencystatustile extends IPSModuleStrict
         foreach ($this->Residents() as $resident) {
             $register($resident['Variable'], $residentMessages);
             $register($resident['AdditionalInfo'], [VM_UPDATE, OM_UNREGISTER]);
+            $register($resident['Distance'], [VM_UPDATE, OM_UNREGISTER]);
             $register($resident['Image'], $mediaMessages);
         }
     }
@@ -468,6 +475,9 @@ class TileVisuresidencystatustile extends IPSModuleStrict
         foreach ($this->Residents() as $index => $resident) {
             $infoID = $resident['AdditionalInfo'];
             $result['info' . ($index + 1)] = IPS_VariableExists($infoID) ? GetValueFormatted($infoID) : '';
+            // Entfernung als Kennzeichen oben rechts am Foto.
+            $distanceID = $resident['Distance'];
+            $result['distance' . ($index + 1)] = IPS_VariableExists($distanceID) ? GetValueFormatted($distanceID) : '';
         }
 
         $result['eckenradius'] = $this->BoundedFloat('Eckenradius', 0, 50, 50);
@@ -600,8 +610,10 @@ class TileVisuresidencystatustile extends IPSModuleStrict
             if ($resident['Variable'] !== 0 && !$this->IsResidentVariable($resident['Variable'])) {
                 $warnings[] = $label($slot) . ': ' . $this->Translate('Select an existing Boolean variable.');
             }
-            if ($resident['AdditionalInfo'] !== 0 && !IPS_VariableExists($resident['AdditionalInfo'])) {
-                $warnings[] = $label($slot) . ': ' . $this->Translate('Select an existing variable.');
+            foreach (['AdditionalInfo', 'Distance'] as $optional) {
+                if ($resident[$optional] !== 0 && !IPS_VariableExists($resident[$optional])) {
+                    $warnings[] = $label($slot) . ': ' . $this->Translate('Select an existing variable.');
+                }
             }
             $imageProperties[$label($slot)] = $resident['Image'];
         }

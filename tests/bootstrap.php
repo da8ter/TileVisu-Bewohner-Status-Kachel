@@ -82,7 +82,7 @@ function register(IPSModuleStrict $module): IPSModuleStrict {
 // Bewohnerliste wie das Formular sie speichert.
 function residents(array ...$rows): string {
     return json_encode(array_map(static fn (array $r): array => $r + [
-        'Variable' => 0, 'AdditionalInfo' => 0, 'Image' => 0, 'AltName' => '',
+        'Variable' => 0, 'AdditionalInfo' => 0, 'Image' => 0, 'Distance' => 0, 'AltName' => '',
     ], $rows));
 }
 function IPS_VariableExists(int $id): bool { return isset($GLOBALS['variables'][$id]); }

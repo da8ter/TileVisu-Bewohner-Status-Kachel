@@ -125,6 +125,26 @@ array_walk_recursive($form, static function ($value, $key) use (&$lists) { if ($
 check($lists === ['List'], 'Configuration offers exactly one resident list');
 check(!str_contains($list->GetConfigurationForm(), '"repeat"') && !str_contains($list->GetConfigurationForm(), '{i}'), 'No template leftovers in the form');
 
+// --- Entfernung am Foto ---------------------------------------------------
+$dist = register(new TileVisuresidencystatustile()); $dist->InstanceID = 12351; register($dist);
+$dist->Create();
+resident(500); resident(501, '2,4 km'); resident(502, 'Arbeit');
+$dist->properties['Residents'] = residents(['Variable' => 500, 'AdditionalInfo' => 502, 'Distance' => 501]);
+$dist->ApplyChanges();
+check(latest($dist)['distance1'] === '2,4 km', 'Distance reaches the tile');
+check(in_array(VM_UPDATE, $dist->messages[501], true) && isset($dist->references[501]), 'Distance variable is watched');
+$variables[501]['value'] = '15 km'; $dist->MessageSink(0, 501, VM_UPDATE, []);
+check(latest($dist) === ['distance1' => '15 km'], 'Distance updates arrive as a delta of their own');
+check(latest($dist) !== ['info1' => '15 km'], 'Distance is not confused with the additional info');
+$dist->properties['Residents'] = residents(['Variable' => 500]);
+$dist->ApplyChanges();
+check(latest($dist)['distance1'] === '' && !isset($dist->references[501]), 'Without a variable the badge stays empty');
+unset($variables[501]);
+$dist->properties['Residents'] = residents(['Variable' => 500, 'Distance' => 501]);
+$dist->ApplyChanges();
+check(latest($dist)['distance1'] === '', 'A deleted distance variable empties the badge');
+check(str_contains($dist->GetConfigurationForm(), 'Select an existing variable.'), 'Invalid distance variable is reported');
+
 // --- Übernahme alter Installationen ---------------------------------------
 $old = new TileVisuresidencystatustile(); $old->InstanceID = 12348; register($old); $old->Create();
 resident(401); resident(402); resident(403, 'Arbeit');
@@ -138,7 +158,7 @@ $old->ApplyChanges();
 $imported = json_decode($old->properties['Residents'], true, 512, JSON_THROW_ON_ERROR);
 check(count($imported) === 2, 'Only configured slots are imported');
 check($imported[0]['Variable'] === 401 && $imported[0]['AltName'] === '', 'First slot keeps its variable');
-check($imported[1] === ['Variable' => 402, 'AdditionalInfo' => 403, 'Image' => 404, 'AltName' => 'Papa'],
+check($imported[1] === ['Variable' => 402, 'AdditionalInfo' => 403, 'Image' => 404, 'Distance' => 0, 'AltName' => 'Papa'],
     'Gap is closed and every field carried over');
 check($old->properties['Bewohner1'] === 0 && $old->properties['Bewohner3AltName'] === '', 'Legacy slots are cleared after the import');
 check($old->attributes['LegacyImported'], 'Import is recorded');

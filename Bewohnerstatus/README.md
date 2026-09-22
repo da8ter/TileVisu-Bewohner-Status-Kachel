@@ -14,6 +14,7 @@
 ### 1. Funktionsumfang
 
 * Bildet den Anwesenheitsstatus beliebig vieler Bewohner ab. Sie werden in einer Liste eingerichtet, die sich jederzeit erweitern, kürzen und umsortieren lässt. Der Status eines Bewohners wird über eine Bool-Variable gesteuert. Ein Umschalten des Status kann zusätzlich über das Bild erfolgen (kann in der Konfiguration deaktiviert werden). Anwesende Bewohner werden in Farbe, abwesende in Graustufen dargestellt. Es kann je Bewohner ein eigenes Bild verwendet werden.
+* Je Bewohner kann eine Entfernungs-Variable gewählt werden. Ihr formatierter Wert erscheint als kleines Kennzeichen oben rechts am Foto und aktualisiert sich automatisch. Die Schriftgröße folgt der Einstellung „Info Schriftgröße".
 * Für jeden Bewohner kann eine zusätzliche Info-Variable angezeigt werden (z. B. der aktuelle Standort wie "Arbeit" oder "Entfernung" etc.). Die Inhalte werden automatisch und dynamisch aktualisiert, sobald sich der Wert der gewählten Variable ändert. Es sind alle Variablentypen erlaubt.
 * Die Schriftgröße für den Bewohnernamen und die Zusatzinfo ist individuell einstellbar (Pixel).
 * Der Eckenradius der Bilder ist einstellbar (z.B. 50% für runde Bilder).
@@ -63,11 +64,12 @@ Spalte                     | Beschreibung
 Status                     | Bool-Variable, die den Anwesenheitsstatus des Bewohners steuert (`true` = anwesend, `false` = abwesend). Pflichtangabe je Zeile.
 Zusätzliche Info           | Variable, deren formatierter Inhalt unter dem Bewohnernamen angezeigt wird (z.B. Standort, Statusmeldung). Alle Variablentypen sind erlaubt.
 Foto                       | Auswahl eines eigenen Bildes (Medienobjekt) für den Bewohner.
+Entfernung                 | Variable, deren formatierter Inhalt als kleines Kennzeichen oben rechts am Foto erscheint (z.B. `2,4 km`). Alle Variablentypen sind erlaubt. Ohne Variable oder bei leerem Wert bleibt das Kennzeichen unsichtbar.
 Name überschreiben         | Optionaler alternativer Name, der anstelle des Variablennamens angezeigt wird.
 
 ### 5. Statusvariablen und Profile
 
-Je Bewohner wird eine existierende Boolean-Variable benötigt. Ungültige Zuordnungen werden ausgeblendet und beim Öffnen der Konfiguration gemeldet. Zusatzinformationen verwenden den formatierten Variablenwert. Ungültige UTF-8-Zeichen werden durch Ersatzzeichen ersetzt.
+Je Bewohner wird eine existierende Boolean-Variable benötigt. Ungültige Zuordnungen werden ausgeblendet und beim Öffnen der Konfiguration gemeldet. Zusatzinformation und Entfernung verwenden den formatierten Variablenwert. Ungültige UTF-8-Zeichen werden durch Ersatzzeichen ersetzt.
 
 Ein Klick führt eine vorhandene Variablenaktion aus. Nur beschreibbare Variablen ohne Aktion werden direkt umgeschaltet. Schreibgeschützte Sensoren ohne Aktion, deaktivierte Objekte, gesperrte Variablen und ausdrücklich deaktivierte oder nicht verfügbare Aktionen sind nicht bedienbar. Die globale Bedienungssperre wird zusätzlich serverseitig geprüft.
 
@@ -90,6 +92,7 @@ Die maximale Bildbreite ist von 10 bis 100 Prozent einstellbar (Standard: 80 Pro
 * Die Hinweise auf der Konfigurationsseite (ungültige Variable, nicht unterstütztes Bild, überschrittenes Bildbudget) beziehen sich auf den **übernommenen** Stand. Nach dem Ändern eines Feldes erscheinen sie erst nach "Änderungen übernehmen".
 * Bewohnerfotos werden nur für die Kachel verkleinert (längste Kante 512 px, Ziel unter 128 KiB, WebP sofern verfügbar). Die Medienobjekte selbst bleiben unverändert. Ohne PHP-GD entfällt die Verkleinerung; die Konfigurationsseite weist darauf hin.
 * Die Kachel baut ihre Bewohnerplätze aus der Nachricht auf. Eine geöffnete Kachel folgt einer geänderten Liste sofort, ohne neu geladen zu werden.
-* **Übernahme alter Installationen:** Bis Version 1.1.0 gab es fünf feste Bewohner-Felder. Beim ersten Start nach dem Update wandert deren Inhalt automatisch in die Liste — Lücken werden geschlossen, Foto, Zusatzinfo und alternativer Name bleiben erhalten. Die alten Felder werden danach geleert, die Übernahme läuft genau einmal und wird im Meldungslog vermerkt. Wer die Liste anschließend leert, bekommt die alten Bewohner nicht zurück.
+* Das Entfernungs-Kennzeichen bleibt innerhalb des Fotorahmens, weil die Kachel auf `overflow: hidden` steht; in der obersten Reihe wäre ein überstehendes Kennzeichen sonst abgeschnitten.
+* **Übernahme alter Installationen:** Bis Version 1.1.0 gab es fünf feste Bewohner-Felder. Beim ersten Start nach dem Update wandert deren Inhalt automatisch in die Liste — Lücken werden geschlossen, Foto, Zusatzinfo und alternativer Name bleiben erhalten; die Entfernung bleibt leer, die gab es vorher nicht. Die alten Felder werden danach geleert, die Übernahme läuft genau einmal und wird im Meldungslog vermerkt. Wer die Liste anschließend leert, bekommt die alten Bewohner nicht zurück.
 
 Entwicklung und Prüfschritte: [Regressionstests](../tests/README.md).

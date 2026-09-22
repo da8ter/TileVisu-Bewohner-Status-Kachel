@@ -13,11 +13,11 @@ git diff --check
 
 Der zweite PHP-Lauf lässt `VM_CHANGEDLOCKED` absichtlich undefiniert und prüft damit Instanzerstellung, Kernelstart und Nachrichtenverarbeitung auch ohne diese optionale SDK-Konstante.
 
-Die PHP-Tests prüfen zusätzlich die Bewohnerliste (zwölf Zeilen, Kürzen, leere und kaputte Listendaten, Idents außerhalb der Liste), die Übernahme alter Installationen (Lücken schließen, Felder leeren, genau ein Durchlauf, Neuinstallation, bereits gepflegte Liste, absichtlich geleerte Liste) und die Darstellung abwesender Bewohner.
+Die PHP-Tests prüfen zusätzlich die Bewohnerliste (zwölf Zeilen, Kürzen, leere und kaputte Listendaten, Idents außerhalb der Liste), die Übernahme alter Installationen (Lücken schließen, Felder leeren, genau ein Durchlauf, Neuinstallation, bereits gepflegte Liste, absichtlich geleerte Liste), die Entfernungs-Variable (eigenes Delta, Abo, fehlende und gelöschte Variable) und die Darstellung abwesender Bewohner.
 
 Die PHP-Tests verwenden isolierte SDK-Doubles. Sie prüfen Kernelstart, Hintergrundentfernung, vollständige Initialzustände trotz Bild-Deltas, WebP und Medienänderungen, Umschaltung mit und ohne Aktion, Schreibschutz, Bedienungssperre, ungültige Zuordnungen, UTF-8, Script-Escaping, Wertebegrenzung, Konfigurationshinweise und Bildgrößenlimit.
 
-Die JavaScript-Tests führen den tatsächlichen Nachrichtencode mit einem minimalen DOM-Double aus. Die Kachel erzeugt ihre Bewohnerplätze selbst, das DOM-Double beherrscht dafür `createElement`/`appendChild`/`removeChild`. Geprüft werden das Wachsen und Schrumpfen der Liste ohne Neuladen, unsinnige Bewohnerzahlen, Reihenfolgeunabhängigkeit, vollständige und partielle Updates, Sichtbarkeit, Textausgabe, ARIA-Zustände, Graustufen und Deckkraft bei Abwesenheit und fehlerhafte Nachrichten. Native Tastaturereignisse und CSS-Layout benötigen zusätzlich einen Browser.
+Die JavaScript-Tests führen den tatsächlichen Nachrichtencode mit einem minimalen DOM-Double aus. Die Kachel erzeugt ihre Bewohnerplätze selbst, das DOM-Double beherrscht dafür `createElement`/`appendChild`/`removeChild`. Geprüft werden das Wachsen und Schrumpfen der Liste ohne Neuladen, unsinnige Bewohnerzahlen, das Entfernungs-Kennzeichen, Reihenfolgeunabhängigkeit, vollständige und partielle Updates, Sichtbarkeit, Textausgabe, ARIA-Zustände, Graustufen und Deckkraft bei Abwesenheit und fehlerhafte Nachrichten. Native Tastaturereignisse und CSS-Layout benötigen zusätzlich einen Browser.
 
 Vor einer Veröffentlichung in einer Symcon-Testinstanz prüfen:
 
