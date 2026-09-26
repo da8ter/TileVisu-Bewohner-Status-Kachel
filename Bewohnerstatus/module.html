@@ -253,7 +253,7 @@
 
     <!-- symcon-icons-shared: Quelle visu-messung/baustein/tile-icons-shared.js, verteilt per verteilen.py -->
     <script>
-/* symcon-icons-shared v1: Symcons /icons.js läuft einmal im Visu-Hauptfenster statt in jeder Kachel.
+/* symcon-icons-shared v2: Symcons /icons.js läuft einmal im Visu-Hauptfenster statt in jeder Kachel.
    Ersetzt das Script-Tag für /icons.js im head einer Kachel. Ohne erreichbares Hauptfenster
    (Symcon-App, direkter Aufruf, PWA) lädt die Kachel icons.js wie bisher. Symcon bleibt unverändert.
    Steht inline in einem script-Element: niemals ein schließendes Script-Tag in diesen Text schreiben.
@@ -271,13 +271,14 @@
     teilen(slot.fa, slot.css);
     return;
   }
-  // Erste Kachel (oder kein Hauptfenster): für sich laden wie bisher - synchron, damit die
-  // Kachel-Skripte FontAwesome wie gewohnt vorfinden.
+  // Kein Hauptfenster, oder es lädt icons.js gerade erst: für sich laden wie bisher - synchron,
+  // damit die Kachel-Skripte FontAwesome wie gewohnt vorfinden.
   d.write('<script src="/icons.js" crossorigin="anonymous"><\/script>');
-  if (host && !slot) {
+  if (!host) return;
+  if (!slot) {
     // Einmal im Hauptfenster nachladen, ohne dass FontAwesome dort das Flutter-DOM anfasst.
     try {
-      slot = host.__symconIcons = { v: 1, fa: null, css: '' };
+      slot = host.__symconIcons = { v: 1, fa: null, css: '', fehler: false };
       host.FontAwesomeConfig = { autoReplaceSvg: false, observeMutations: false, autoAddCss: false };
       var s = host.document.createElement('script');
       s.src = '/icons.js';
@@ -285,12 +286,48 @@
         if (host.FontAwesome && host.FontAwesome.dom) {
           slot.css = host.FontAwesome.dom.css();
           slot.fa = host.FontAwesome;
+        } else {
+          slot.fehler = true;
         }
+      };
+      s.onerror = function () {
+        slot.fehler = true;
       };
       host.document.head.appendChild(s);
     } catch (e) {
-      // Hauptfenster nimmt kein Skript an: jede Kachel bleibt beim eigenen icons.js.
+      return; // Hauptfenster nimmt kein Skript an: die Kachel bleibt beim eigenen icons.js.
     }
+  }
+  // Kacheln kommen beim ersten Laden fast gleichzeitig: bis das Hauptfenster bereit ist, arbeitet
+  // die eigene Kopie, danach wechselt die Kachel auf die geteilte und gibt ihre eigene frei.
+  var versuche = 0;
+  var abwarten = function () {
+    if (slot.fa && d.readyState !== 'loading') {
+      wechseln(slot);
+    } else if (!slot.fehler && ++versuche <= 100) {
+      setTimeout(abwarten, 100);
+    }
+  };
+  setTimeout(abwarten, 100);
+
+  function wechseln(slot) {
+    var eigen = w.FontAwesome;
+    if (!eigen || eigen === slot.fa) return;
+    try {
+      eigen.noAuto(); // stoppt den Beobachter der eigenen Kopie
+    } catch (e) {
+      return; // eigene Kopie lässt sich nicht anhalten: bei ihr bleiben statt doppelt zu wandeln
+    }
+    // Alle drei Globalen von icons.js lösen, sonst hält FontAwesomeConfig (Getter/Setter) die Kopie fest
+    var namen = ['FontAwesome', '___FONT_AWESOME___', 'FontAwesomeConfig'];
+    for (var i = 0; i < namen.length; i++) {
+      try {
+        delete w[namen[i]];
+      } catch (e) {
+        w[namen[i]] = undefined;
+      }
+    }
+    teilen(slot.fa, slot.css);
   }
 
   function teilen(fa, css) {
