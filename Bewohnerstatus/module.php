@@ -104,6 +104,11 @@ class TileVisuresidencystatustile extends IPSModuleStrict
             return;
         }
 
+        // Symcon meldet jede Aktualisierung einer Variable, auch ohne neuen Wert: dann bleibt die Kachel, wie sie ist
+        if ($Message === VM_UPDATE && !self::ValueChanged($Data)) {
+            return;
+        }
+
         $update = [];
         foreach ($this->Residents() as $index => $resident) {
             $i = $index + 1;
@@ -126,7 +131,12 @@ class TileVisuresidencystatustile extends IPSModuleStrict
             }
         }
         if ($update !== []) {
-            $this->UpdateVisualizationValue($this->EncodeJSON($update));
+            // Eine unveränderte Wertnachricht geht kein zweites Mal hinaus (Prüfwert je Variable), Namen immer
+            if ($Message === VM_UPDATE) {
+                $this->SendUpdateIfChanged((string) $SenderID, $this->EncodeJSON($update));
+            } else {
+                $this->UpdateVisualizationValue($this->EncodeJSON($update));
+            }
         }
     }
 
@@ -161,6 +171,9 @@ class TileVisuresidencystatustile extends IPSModuleStrict
 
     public function GetVisualizationTile(): string
     {
+        // Erstaufbau: die Kachel bekommt den vollen Stand, danach geht jede Wertänderung wieder hinaus
+        $this->SetBuffer('UpdateHashes', '');
+
         $module = file_get_contents(__DIR__ . '/module.html');
         if ($module === false) {
             $this->LogMessage('module.html could not be loaded', KL_ERROR);
@@ -640,8 +653,35 @@ class TileVisuresidencystatustile extends IPSModuleStrict
                 }
             }
         }
+        // Der volle Stand geht hinaus (ApplyChanges oder Auffrischung wie MM_UPDATE und OM_CHANGEDISABLED): die
+        // Prüfwerte der zuletzt gesendeten Wertnachrichten gelten danach nicht mehr.
+        $this->SetBuffer('UpdateHashes', '');
         $this->UpdateVisualizationValue($this->EncodeJSON($data));
         $this->SetBuffer('ImageHashes', $this->EncodeJSON($hashes));
+    }
+
+    // Symcon meldet mit VM_UPDATE jede Aktualisierung; $Data[1] sagt, ob sich der Wert geändert hat.
+    // Fehlt die Angabe (anderes Format), gilt sie als Änderung: lieber senden als eine verschlucken.
+    private static function ValueChanged(array $Data): bool
+    {
+        return !isset($Data[1]) || (bool) $Data[1];
+    }
+
+    // Schickt die Nachrichten eines Schlüssels nur, wenn sie sich von den zuletzt dazu gesendeten unterscheiden.
+    // Die Prüfwerte (md5) stehen im Puffer UpdateHashes; der volle Stand und der Erstaufbau leeren ihn.
+    private function SendUpdateIfChanged(string $key, string ...$messages): void
+    {
+        $hashes = json_decode($this->GetBuffer('UpdateHashes'), true);
+        $hashes = is_array($hashes) ? $hashes : [];
+        $hash = md5(serialize($messages));
+        if (($hashes[$key] ?? null) === $hash) {
+            return;
+        }
+        foreach ($messages as $message) {
+            $this->UpdateVisualizationValue($message);
+        }
+        $hashes[$key] = $hash;
+        $this->SetBuffer('UpdateHashes', (string) json_encode($hashes));
     }
 
     // Hook-Adresse statt Data-URI, sobald der Hook in diesem Kernel-Lauf registriert ist. Die Version (Hash

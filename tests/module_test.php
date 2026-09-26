@@ -5,6 +5,62 @@ require __DIR__ . '/bootstrap.php';
 set_error_handler(static function (int $severity, string $message, string $file, int $line): never {
     throw new ErrorException($message, 0, $severity, $file, $line);
 });
+
+const VOR_FILTER = '49e296f'; // letzter Stand, der jede Aktualisierung an die Kachel schickte
+
+// VM_UPDATE nur bei echter Wertaenderung: Zeilen [Bezeichnung, erwartete Nachrichten, gesendete Nachrichten].
+// Laeuft auch gegen den Stand vor dem Filter; dort muessen genau die Zeilen fallen, die keine Nachricht erwarten.
+function nachrichtenfilter(): array {
+    global $variables;
+    resident(900, false); resident(901, '2 km'); resident(902, 'Arbeit');
+    $m = new TileVisuresidencystatustile(); $m->InstanceID = 12700; register($m); $m->Create();
+    $m->properties['Residents'] = residents(['Variable' => 900, 'AdditionalInfo' => 902, 'Distance' => 901]);
+    $m->ApplyChanges();
+    $zeilen = [];
+    $zaehle = static function (string $label, int $erwartet, callable $aktion) use ($m, &$zeilen): void {
+        $vorher = count($m->updates);
+        $aktion();
+        $zeilen[] = [$label, $erwartet, count($m->updates) - $vorher];
+    };
+    // $Data wie von Symcon: [neuer Wert, geaendert, alter Wert, Zeitstempel]
+    $update = static fn (int $id, array $data): callable => static fn () => $m->MessageSink(0, $id, VM_UPDATE, $data);
+    $zaehle('Update without a new value ($Data[1] false) sends nothing', 0, $update(900, [false, false, false, 1]));
+    $variables[900]['value'] = true;
+    $zaehle('Changed status sends its delta', 1, $update(900, [true, true, false, 2]));
+    $variables[902]['value'] = 'Schule';
+    $zaehle('Another variable sends its own delta', 1, $update(902, ['Schule', true, 'Arbeit', 3]));
+    // Die Kachel liest den aktuellen Wert: nach mehreren schnellen Aenderungen ist das Delta dasselbe
+    $zaehle('Identical delta is not sent again (memory per variable)', 0, $update(900, [true, true, false, 4]));
+    $zaehle('Name changes are never filtered', 2, static function () use ($m): void {
+        $m->MessageSink(0, 900, OM_CHANGENAME, []);
+        $m->MessageSink(0, 900, OM_CHANGENAME, []);
+    });
+    $zaehle('A refresh sends the full state', 1, static fn () => $m->MessageSink(0, 900, OM_CHANGEDISABLED, []));
+    $zaehle('After a full state the same delta goes out again', 1, $update(900, [true, true, false, 5]));
+    $zaehle('... but only once', 0, $update(900, [true, true, false, 6]));
+    $m->ApplyChanges();
+    $zaehle('After ApplyChanges the same delta goes out again', 1, $update(900, [true, true, false, 7]));
+    $m->GetVisualizationTile();
+    $zaehle('After the initial build of a tile it goes out again', 1, $update(900, [true, true, false, 8]));
+    $m->GetVisualizationTile();
+    $zaehle('Without $Data[1] (other format) the update is sent', 1, $update(901, []));
+    return $zeilen;
+}
+
+// Fuehrt diese Datei mit einer anderen Fassung der Kachel in einem eigenen Prozess aus: [Exitcode, Ausgabe].
+function unterprozess(string $moduleFile, string $mode): array {
+    $command = 'RESIDENT_MODULE=' . escapeshellarg($moduleFile) . ' ' . escapeshellarg(PHP_BINARY) . ' '
+        . escapeshellarg(__FILE__) . ' ' . escapeshellarg($mode) . ' 2>&1';
+    exec($command, $lines, $code);
+    return [$code, implode("\n", $lines)];
+}
+
+if (($argv[1] ?? '') === 'nachrichtenfilter') {
+    // Gegenprobe: dieselben Schritte mit einer anderen Fassung der Kachel
+    echo json_encode(nachrichtenfilter(), JSON_THROW_ON_ERROR);
+    exit(0);
+}
+
 check(defined('VM_CHANGEDLOCKED') === (getenv('RESIDENT_TEST_NO_LOCK_MESSAGE') !== '1'), 'Requested SDK constant availability is active');
 resident(10); resident(20, 'Arbeit');
 $m = register(new TileVisuresidencystatustile()); $m->Create();
@@ -237,5 +293,35 @@ check(latest($m)['graustufen'] === 0 && (float) latest($m)['abwesenheitstranspar
 $m->properties['Abwesenheitstransparenz'] = 500; $m->ApplyChanges();
 // json_encode macht aus 1.0 ein int; hier zaehlt der Wert, nicht der PHP-Typ.
 check((float) latest($m)['abwesenheitstransparenz'] === 1.0, 'Absent opacity is bounded');
+
+// --- VM_UPDATE nur bei echter Wertaenderung --------------------------------
+$zeilen = nachrichtenfilter();
+foreach ($zeilen as [$label, $erwartet, $ist]) {
+    check($ist === $erwartet, $label . ' (' . $ist . ' messages)');
+}
+$repo = escapeshellarg(dirname(__DIR__));
+exec('git -C ' . $repo . ' cat-file -e ' . escapeshellarg(VOR_FILTER . '^{commit}') . ' 2>/dev/null', $unused, $gitCode);
+if ($gitCode !== 0) {
+    echo 'SKIP: ' . VOR_FILTER . ' not available, no counter-check of the message filter' . PHP_EOL;
+} else {
+    // module.php und module.html des frueheren Stands in ein Temp-Verzeichnis, dort im eigenen Prozess
+    $dir = sys_get_temp_dir() . '/resident-test-' . bin2hex(random_bytes(6));
+    mkdir($dir . '/Bewohnerstatus', 0700, true);
+    foreach (['module.php', 'module.html'] as $datei) {
+        file_put_contents($dir . '/Bewohnerstatus/' . $datei,
+            (string) shell_exec('git -C ' . $repo . ' show ' . escapeshellarg(VOR_FILTER . ':Bewohnerstatus/' . $datei)));
+    }
+    [$code, $json] = unterprozess($dir . '/Bewohnerstatus/module.php', 'nachrichtenfilter');
+    foreach (['module.php', 'module.html'] as $datei) {
+        unlink($dir . '/Bewohnerstatus/' . $datei);
+    }
+    rmdir($dir . '/Bewohnerstatus');
+    rmdir($dir);
+    $vorher = $code === 0 ? json_decode($json, true, 512, JSON_THROW_ON_ERROR) : [];
+    $fallend = array_column(array_filter($vorher, static fn (array $z): bool => $z[1] !== $z[2]), 0);
+    $still = array_column(array_filter($zeilen, static fn (array $z): bool => $z[1] === 0), 0);
+    check($code === 0 && $still !== [] && $fallend === $still,
+        'Counter-check: without the filter (' . VOR_FILTER . ') exactly the ' . count($still) . ' checks expecting no message fail');
+}
 
 echo 'Worst-case image fixture transport: ' . $transportSize . ' bytes' . PHP_EOL;

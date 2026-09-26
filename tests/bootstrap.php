@@ -142,4 +142,5 @@ function snapshot(TileVisuresidencystatustile $module): array {
     if ($end === false) throw new RuntimeException('Incomplete initial state');
     return json_decode(json_decode(substr($html, $start, $end - $start), true, 512, JSON_THROW_ON_ERROR), true, 512, JSON_THROW_ON_ERROR);
 }
-require __DIR__ . '/../Bewohnerstatus/module.php';
+// RESIDENT_MODULE waehlt eine andere Fassung der Kachel (Gegenprobe gegen den Stand vor dem Nachrichtenfilter).
+require getenv('RESIDENT_MODULE') ?: __DIR__ . '/../Bewohnerstatus/module.php';
