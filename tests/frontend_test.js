@@ -133,9 +133,10 @@ assert(raw.includes('prefers-reduced-motion'));
 
 f.send({ distance1: '' });
 assert(f.slot(1).badge.classes.has('hidden'));
-// Symcon liefert Font Awesome unter /icons.js und ersetzt <i> erst nachtraeglich
-// durch ein <svg>; beide Formen muessen bemessen sein.
-assert(raw.includes('<script src="/icons.js"></script>'));
+// Symcon liefert Font Awesome unter /icons.js; die Kachel laedt es ueber den Baustein
+// symcon-icons-shared (einmal im Visu-Hauptfenster, sonst selbst). <i> wird erst
+// nachtraeglich durch ein <svg> ersetzt; beide Formen muessen bemessen sein.
+assert(raw.includes('<!-- symcon-icons-shared') && raw.includes("'/icons.js'"));
 assert(/\.badge i, \.badge svg\s*\{/.test(raw));
 // Flach: keine Umrandung, kein Schatten, keine Kontur. Die Regel wird zerlegt,
 // statt sie mit einem Ausdruck zu erraten.
