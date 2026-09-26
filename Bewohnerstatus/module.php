@@ -28,6 +28,7 @@ class TileVisuresidencystatustile extends IPSModuleStrict
     private ?array $residents = null;
     private ?array $thumbnails = null;
     private array $thumbnailsUsed = [];
+    private array $thumbnailsChanged = [];
 
     public function Create(): void
     {
@@ -357,28 +358,47 @@ class TileVisuresidencystatustile extends IPSModuleStrict
         if (!function_exists('imagecreatefromstring') || !function_exists('imagepng')) {
             return ''; // GD is optional. The combined output budget remains enforced.
         }
-        if ($this->thumbnails === null) {
-            $cached = json_decode($this->GetBuffer('Thumbnails'), true);
-            $this->thumbnails = is_array($cached) ? $cached : [];
-        }
+        $this->thumbnails ??= [];
         $key = (string) $mediaID;
+        if (!array_key_exists($key, $this->thumbnails)) {
+            $cached = json_decode($this->GetBuffer('Thumbnail' . $key), true);
+            $this->thumbnails[$key] = is_array($cached) ? $cached : null;
+        }
         $hash = hash('sha256', 'v1:' . $base64);
-        $entry = $this->thumbnails[$key] ?? null;
+        $entry = $this->thumbnails[$key];
         if (!is_array($entry) || ($entry['hash'] ?? '') !== $hash) {
             $entry = ['hash' => $hash, 'image' => $this->CreateThumbnail($base64)];
             $this->thumbnails[$key] = $entry;
+            $this->thumbnailsChanged[$key] = true;
         }
         $this->thumbnailsUsed[$key] = true;
         return $entry['image'];
     }
 
-    // Nur die aktuell verwendeten Bilder behalten: bei beliebig vielen
-    // Bewohnern darf der Puffer nicht mit jeder entfernten Zeile weiterwachsen.
+    // Ein Puffer je Foto (hoechstens rund 170 kB): Symcon warnt ab 256 kB und kuerzt Puffer auf die
+    // letzten 512 kB - der fruehere gemeinsame Puffer wurde dabei zerschnitten, und alle Miniaturen
+    // entstanden bei jedem Aufruf neu. Nur die aktuell verwendeten Fotos bleiben: bei beliebig vielen
+    // Bewohnern darf der Speicher nicht mit jeder entfernten Zeile weiterwachsen.
     private function StoreThumbnails(): void
     {
-        if ($this->thumbnails !== null) {
-            $this->SetBuffer('Thumbnails', $this->EncodeJSON(array_intersect_key($this->thumbnails, $this->thumbnailsUsed)));
+        $previous = json_decode($this->GetBuffer('ThumbnailKeys'), true);
+        $previous = is_array($previous) ? array_map('strval', $previous) : [];
+        $used = array_map('strval', array_keys($this->thumbnailsUsed));
+        foreach (array_diff($previous, $used) as $key) {
+            $this->SetBuffer('Thumbnail' . $key, '');
         }
+        foreach (array_keys($this->thumbnailsChanged) as $key) {
+            if (isset($this->thumbnailsUsed[$key])) {
+                $this->SetBuffer('Thumbnail' . $key, $this->EncodeJSON($this->thumbnails[$key]));
+            }
+        }
+        if ($used !== $previous) {
+            $this->SetBuffer('ThumbnailKeys', $this->EncodeJSON(array_map('intval', $used)));
+        }
+        if ($this->GetBuffer('Thumbnails') !== '') {
+            $this->SetBuffer('Thumbnails', ''); // gemeinsamer Puffer der Vorversion
+        }
+        $this->thumbnailsChanged = [];
     }
 
     private function CreateThumbnail(string $base64): string
