@@ -273,7 +273,7 @@
   }
   // Kein Hauptfenster, oder es lädt icons.js gerade erst: für sich laden wie bisher - synchron,
   // damit die Kachel-Skripte FontAwesome wie gewohnt vorfinden.
-  d.write('<script src="/icons.js" crossorigin="anonymous"><\/script>');
+  d.write('<script src="/icons.js" crossorigin="anonymous"><\/script>'); // sicher: fester Text ohne Eingabe, das bisherige icons.js-Tag
   if (!host) return;
   if (!slot) {
     // Einmal im Hauptfenster nachladen, ohne dass FontAwesome dort das Flutter-DOM anfasst.
