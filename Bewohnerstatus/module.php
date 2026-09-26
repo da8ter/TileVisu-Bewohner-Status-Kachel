@@ -59,6 +59,11 @@ class TileVisuresidencystatustile extends IPSModuleStrict
 
         // HTML-SDK-Darstellung
         $this->SetVisualizationType(1);
+
+        // Bilder ueber einen eigenen Hook statt als Data-URI in jedem Kacheldokument: der Browser
+        // cacht sie unter versionierter Adresse, das Dokument bleibt klein. Ohne Hook wie bisher eingebettet.
+        $this->RegisterAttributeString('ImageHookToken', '');
+        $this->SetBuffer('ImageHook', $this->RegisterHook('residentimages/' . $this->InstanceID) ? '1' : '');
     }
 
     public function ApplyChanges(): void
@@ -79,6 +84,7 @@ class TileVisuresidencystatustile extends IPSModuleStrict
             return;
         }
 
+        $this->EnsureImageHookToken();
         $this->RegisterWatchedObjects();
 
         // Einstellungen aktualisieren; unveränderte Bilddaten werden nicht erneut gesendet.
@@ -460,7 +466,7 @@ class TileVisuresidencystatustile extends IPSModuleStrict
     }
 
     // Every initial render gets a complete snapshot. Broadcasts omit unchanged images.
-    private function GetFullUpdateData(array &$limitedImages = []): array
+    private function GetFullUpdateData(array &$limitedImages = [], bool $references = true): array
     {
         // Jede Momentaufnahme bestimmt neu, welche Miniaturen noch gebraucht werden.
         $this->thumbnailsUsed = [];
@@ -511,6 +517,13 @@ class TileVisuresidencystatustile extends IPSModuleStrict
 
         $limitedImages = $this->LimitImagePayload($result);
         $this->StoreThumbnails();
+        if ($references) {
+            foreach ($result as $key => $value) {
+                if ($this->IsImageKey($key)) {
+                    $result[$key] = $this->ImageReference($key, $value);
+                }
+            }
+        }
         return $result;
     }
 
@@ -609,6 +622,94 @@ class TileVisuresidencystatustile extends IPSModuleStrict
         }
         $this->UpdateVisualizationValue($this->EncodeJSON($data));
         $this->SetBuffer('ImageHashes', $this->EncodeJSON($hashes));
+    }
+
+    // Hook-Adresse statt Data-URI, sobald der Hook in diesem Kernel-Lauf registriert ist. Die Version (Hash
+    // des Inhalts) steht in der Adresse: neuer Inhalt ergibt eine neue Adresse, der Browser darf lange cachen.
+    // Was die Ausgabegrenze eines Hooks sprengen wuerde, bleibt eingebettet wie bisher.
+    private function ImageReference(string $key, string $dataUri): string
+    {
+        $token = $this->ImageHookActive() ? $this->ReadAttributeString('ImageHookToken') : '';
+        $comma = strpos($dataUri, ',');
+        if ($token === '' || $comma === false || !str_starts_with($dataUri, 'data:')
+            || intdiv((strlen($dataUri) - $comma - 1) * 3, 4) > $this->HookBodyLimit()) {
+            return $dataUri;
+        }
+        return '/hook/residentimages/' . $this->InstanceID . '?k=' . rawurlencode($key)
+            . '&v=' . substr(hash('sha256', $dataUri), 0, 16) . '&t=' . $token;
+    }
+
+    private function ImageHookActive(): bool
+    {
+        return $this->GetBuffer('ImageHook') === '1';
+    }
+
+    private function EnsureImageHookToken(): void
+    {
+        if ($this->ImageHookActive() && $this->ReadAttributeString('ImageHookToken') === '') {
+            $this->WriteAttributeString('ImageHookToken', bin2hex(random_bytes(16)));
+        }
+    }
+
+    // Groesste Antwort, die Symcon unveraendert ausliefert (ScriptOutputBufferLimit, ab Werk 1 MiB), mit Reserve.
+    private function HookBodyLimit(): int
+    {
+        $limit = 1048576;
+        try {
+            $option = IPS_GetOption('ScriptOutputBufferLimit');
+            if (is_numeric($option) && (int) $option > 0) {
+                $limit = (int) $option;
+            }
+        } catch (Throwable $e) {
+            $this->SendDebug('Image', 'ScriptOutputBufferLimit: ' . $e->getMessage(), 0);
+        }
+        return max(0, $limit - 1024);
+    }
+
+    // /hook/residentimages/<ID>?k=<Bildschluessel>&v=<Version>&t=<Token>: ein Bild des aktuellen Kachelstands.
+    // Die Fotos sind privat: ohne gueltiges Token keine Antwort, nur Bildschluessel der Kachel.
+    protected function ProcessHookData(): void
+    {
+        $token = $this->ImageHookActive() ? $this->ReadAttributeString('ImageHookToken') : '';
+        $given = isset($_GET['t']) && is_string($_GET['t']) ? $_GET['t'] : '';
+        if ($token === '' || !hash_equals($token, $given)) {
+            $this->SendStatus(403);
+            return;
+        }
+        $key = isset($_GET['k']) && is_string($_GET['k']) ? $_GET['k'] : '';
+        $limited = [];
+        $data = $this->IsImageKey($key) ? ($this->GetFullUpdateData($limited, false)[$key] ?? '') : '';
+        $comma = strpos($data, ',');
+        $mime = $comma === false ? '' : substr($data, 5, (int) strpos($data, ';') - 5);
+        $bytes = $comma === false ? false : base64_decode(substr($data, $comma + 1), true);
+        if (!str_starts_with($data, 'data:') || !in_array($mime, self::IMAGE_TYPES, true) || $bytes === false) {
+            $this->SendStatus(404);
+            return;
+        }
+        $version = substr(hash('sha256', $data), 0, 16);
+        $current = isset($_GET['v']) && $_GET['v'] === $version;
+        // Nur die passende Version darf lange gecacht werden; eine alte Adresse bekommt den neuen Inhalt ungecacht.
+        $this->SendHeader('Cache-Control: ' . ($current ? 'private, max-age=31536000, immutable' : 'no-cache'));
+        $this->SendHeader('ETag: "' . $version . '"');
+        $this->SendHeader('X-Content-Type-Options: nosniff');
+        if ($current && trim((string) ($_SERVER['HTTP_IF_NONE_MATCH'] ?? '')) === '"' . $version . '"') {
+            $this->SendStatus(304);
+            return;
+        }
+        $this->SendHeader('Content-Type: ' . $mime);
+        $this->SendHeader('Content-Length: ' . strlen($bytes));
+        echo $bytes;
+    }
+
+    // Eigene Methoden fuer Kopfzeilen und Status, damit die Tests den Hook ohne Webserver pruefen koennen.
+    protected function SendHeader(string $header): void
+    {
+        header($header);
+    }
+
+    protected function SendStatus(int $code): void
+    {
+        http_response_code($code);
     }
 
     public function GetConfigurationForm(): string

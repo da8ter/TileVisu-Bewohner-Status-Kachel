@@ -6,6 +6,7 @@ Ohne Zugriff auf einen Symcon-Server aus dem Repository-Verzeichnis ausführen:
 php -l Bewohnerstatus/module.php
 php tests/module_test.php
 php tests/thumbnail_test.php
+php tests/image_hook_test.php
 RESIDENT_TEST_NO_LOCK_MESSAGE=1 php tests/module_test.php
 node tests/frontend_test.js
 git diff --check
@@ -16,6 +17,8 @@ Der zweite PHP-Lauf lässt `VM_CHANGEDLOCKED` absichtlich undefiniert und prüft
 Die PHP-Tests prüfen zusätzlich die Bewohnerliste (zwölf Zeilen, Kürzen, leere und kaputte Listendaten, Idents außerhalb der Liste), die Übernahme alter Installationen (Lücken schließen, Felder leeren, genau ein Durchlauf, Neuinstallation, bereits gepflegte Liste, absichtlich geleerte Liste), die Entfernungs-Variable (eigenes Delta, Abo, fehlende und gelöschte Variable, Ausblenden bei Anwesenheit in beide Richtungen), die Anzeigereihenfolge (folgt der Liste, auch nach Umsortieren, auch für die Idents) und die Darstellung abwesender Bewohner.
 
 Die PHP-Tests verwenden isolierte SDK-Doubles. Sie prüfen Kernelstart, Hintergrundentfernung, vollständige Initialzustände trotz Bild-Deltas, WebP und Medienänderungen, Umschaltung mit und ohne Aktion, Schreibschutz, Bedienungssperre, ungültige Zuordnungen, UTF-8, Script-Escaping, Wertebegrenzung, Konfigurationshinweise und Bildgrößenlimit.
+
+Der Hook-Test prüft die Bildauslieferung über `/hook/residentimages/<ID>`: Adressen mit Version und Token statt Data-URIs, Auslieferung mit Bildtyp, langem privatem Cache und 304, Ablehnung fremder Token und Schlüssel, neue Adresse bei geändertem Foto, Einbettung wie bisher über der Ausgabegrenze und ohne registrierten Hook.
 
 Die JavaScript-Tests führen den tatsächlichen Nachrichtencode mit einem minimalen DOM-Double aus. Die Kachel erzeugt ihre Bewohnerplätze selbst, das DOM-Double beherrscht dafür `createElement`/`appendChild`/`removeChild`. Geprüft werden das Wachsen und Schrumpfen der Liste ohne Neuladen, unsinnige Bewohnerzahlen, das Entfernungs-Kennzeichen samt Aus- und Einfahren per Tipp und Zeitablauf, Reihenfolgeunabhängigkeit, vollständige und partielle Updates, Sichtbarkeit, Textausgabe, ARIA-Zustände, Graustufen und Deckkraft bei Abwesenheit und fehlerhafte Nachrichten. Native Tastaturereignisse und CSS-Layout benötigen zusätzlich einen Browser.
 

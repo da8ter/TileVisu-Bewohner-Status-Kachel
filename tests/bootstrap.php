@@ -32,6 +32,12 @@ class IPSModuleStrict
     protected function RegisterAttributeBoolean(string $k, bool $v): void { $this->attributes[$k] = $v; }
     protected function ReadAttributeBoolean(string $k): bool { return $this->attributes[$k]; }
     protected function WriteAttributeBoolean(string $k, bool $v): void { $this->attributes[$k] = $v; }
+    protected function RegisterAttributeString(string $k, string $v): void { $this->attributes[$k] = $v; }
+    protected function ReadAttributeString(string $k): string { return $this->attributes[$k]; }
+    protected function WriteAttributeString(string $k, string $v): void { $this->attributes[$k] = $v; }
+    // Nativer Hook (IPSModuleStrict): ohne $hookAvailable gilt er als nicht registriert.
+    public array $hooks = [];
+    protected function RegisterHook(string $hook): bool { $this->hooks[] = $hook; return $GLOBALS['hookAvailable'] ?? false; }
     protected function SetVisualizationType(int $type): void {}
     protected function UpdateVisualizationValue(string $value): void { $this->updates[] = $value; }
     protected function GetReferenceList(): array { return array_keys($this->references); }
@@ -63,6 +69,7 @@ function resident(int $id, mixed $value = true, array $overrides = []): void {
     ], $overrides);
 }
 function IPS_GetKernelRunlevel(): int { return $GLOBALS['runlevel']; }
+function IPS_GetOption(string $option): mixed { return $GLOBALS['options'][$option] ?? 1048576; }
 // Symcon merkt Properties vor und aktiviert sie mit ApplyChanges; die Attrappe
 // setzt sie sofort — fuer den Ablauf der Uebernahme ist das gleichwertig.
 function IPS_SetProperty(int $id, string $key, mixed $value): bool {
