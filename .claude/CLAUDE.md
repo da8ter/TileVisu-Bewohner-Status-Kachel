@@ -41,5 +41,5 @@ Eigene SDK-Attrappe in `tests/bootstrap.php`, kein laufendes Symcon nötig. Was 
 
 ## Weiteres Wissen
 
-- Symcon-Plattformwissen (Lebenszyklus, Hooks und Ausgabegrenze, Puffergrenzen, Property-Migration, Kacheln): https://github.com/da8ter/SymDo-Family-Organizer/tree/SymDo-Beta/docs/plattform, lokal `../List/docs/plattform/`.
-- Muster für sparsame Kachel-Updates: https://github.com/da8ter/SymDo-Family-Organizer/blob/SymDo-Beta/docs/entscheidungen/kacheln-ressourcen.md
+- Symcon-Plattformwissen (Lebenszyklus, Hooks und Ausgabegrenze, Puffergrenzen, Property-Migration, Kacheln): https://github.com/da8ter/SymDo-Family-Organizer/tree/SymDo-Beta/.claude/docs/plattform, lokal `../List/.claude/docs/plattform/`.
+- Muster für sparsame Kachel-Updates: https://github.com/da8ter/SymDo-Family-Organizer/blob/SymDo-Beta/.claude/docs/entscheidungen/kacheln-ressourcen.md
